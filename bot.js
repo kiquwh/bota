@@ -1,4 +1,4 @@
-const fetch = require('node-fetch');
+const https = require('https');
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
@@ -23,7 +23,7 @@ let db = {
     actions: {},
     daily_req: {},
     support_targets: {},
-    spam_control: {} // کنترل اسپم کاربران
+    spam_control: {}
 };
 
 function loadDatabase() {
@@ -48,36 +48,79 @@ function saveDatabase() {
 
 loadDatabase();
 
-async function sendTelegram(method, body) {
-    try {
-        const response = await fetch(`${TELEGRAM_API}/${method}`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body)
+// تابع استاندارد برای ارتباط با تلگرام
+function sendTelegram(method, body) {
+    return new Promise((resolve) => {
+        const urlObj = new URL(`${TELEGRAM_API}/${method}`);
+        const data = JSON.stringify(body);
+
+        const options = {
+            hostname: urlObj.hostname,
+            path: urlObj.pathname,
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Content-Length': Buffer.byteLength(data)
+            }
+        };
+
+        const req = https.request(options, (res) => {
+            let resData = '';
+            res.on('data', chunk => { resData += chunk; });
+            res.on('end', () => {
+                try {
+                    resolve(JSON.parse(resData));
+                } catch (e) {
+                    resolve(null);
+                }
+            });
         });
-        return await response.json();
-    } catch (err) {
-        console.error("Telegram API Error:", err);
-        return null;
-    }
+
+        req.on('error', (err) => {
+            console.error("Telegram API Error:", err);
+            resolve(null);
+        });
+
+        req.write(data);
+        req.end();
+    });
 }
 
 // تابع تست پینگ واقعی پروکسی
-async function pingProxy(proxyLink) {
-    const startTime = Date.now();
-    try {
-        // استخراج هاست یا تست ادرس لینک پروکسی (یا تست اتصال کلی)
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000); // تایم‌اوت ۳ ثانیه
-        
-        await fetch(proxyLink, { method: 'HEAD', signal: controller.signal }).catch(() => {});
-        clearTimeout(timeoutId);
-        
-        const duration = Date.now() - startTime;
-        return `${duration}ms 🟢`;
-    } catch (err) {
-        return "آفلاین / ضعیف 🔴";
-    }
+function pingProxy(proxyLink) {
+    return new Promise((resolve) => {
+        const startTime = Date.now();
+        try {
+            const parsed = new URL(proxyLink);
+            const reqOptions = {
+                hostname: parsed.hostname,
+                port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
+                path: parsed.pathname + parsed.search,
+                method: 'HEAD',
+                timeout: 3000
+            };
+
+            const client = parsed.protocol === 'https:' ? https : http;
+            const req = client.request(reqOptions, (res) => {
+                const duration = Date.now() - startTime;
+                resolve(`${duration}ms 🟢`);
+                req.destroy();
+            });
+
+            req.on('timeout', () => {
+                req.destroy();
+                resolve("آفلاین / ضعیف 🔴");
+            });
+
+            req.on('error', () => {
+                resolve("آفلاین / ضعیف 🔴");
+            });
+
+            req.end();
+        } catch (e) {
+            resolve("آفلاین / ضعیف 🔴");
+        }
+    });
 }
 
 async function checkMembership(userId) {
@@ -101,16 +144,20 @@ async function checkMembership(userId) {
 
 async function isAdminOrOwner(userId) {
     if (Number(userId) === Number(OWNER_ID)) return true;
-    return db.admins[userId] === true;
+    return db.admins && db.admins[userId] === true;
 }
 
 function isOwner(userId) {
     return Number(userId) === Number(OWNER_ID);
 }
 
-// بررسی سیستم ضد اسپم (۸ بار در ۳۰ ثانیه)
+// بررسی سیستم ضد اسپم (۸ بار در ۳۰ ثانیه) - کاملاً ایمن شده
 function checkSpam(userId) {
     const now = Date.now();
+    
+    if (!db.spam_control) {
+        db.spam_control = {};
+    }
     if (!db.spam_control[userId]) {
         db.spam_control[userId] = { timestamps: [], blocked_until: 0 };
     }
@@ -118,15 +165,14 @@ function checkSpam(userId) {
     let userSpam = db.spam_control[userId];
     
     if (userSpam.blocked_until > now) {
-        return Math.ceil((userSpam.blocked_until - now) / 1000); // ثانیه های باقی مانده
+        return Math.ceil((userSpam.blocked_until - now) / 1000);
     }
     
-    // فیلتر کردن تایم‌استمپ‌های ۳۰ ثانیه گذشته
     userSpam.timestamps = userSpam.timestamps.filter(t => now - t < 30000);
     userSpam.timestamps.push(now);
     
     if (userSpam.timestamps.length >= 8) {
-        userSpam.blocked_until = now + (30 * 60 * 1000); // ۳۰ دقیقه مسدودیت
+        userSpam.blocked_until = now + (30 * 60 * 1000);
         saveDatabase();
         return 1800;
     }
@@ -158,10 +204,9 @@ async function handleMessage(msg) {
     const username = msg.from.username ? `@${msg.from.username}` : "ندارد";
     const isGroup = msg.chat.type === "group" || msg.chat.type === "supergroup";
 
-    // پاسخ خودکار در گروه‌ها به کلمه پروکسی
     if (isGroup) {
         if (text.toLowerCase().includes("پروکسی")) {
-            if (db.proxies.length === 0) {
+            if (!db.proxies || db.proxies.length === 0) {
                 await sendTelegram("sendMessage", {
                     chat_id: chatId,
                     reply_to_message_id: msg.message_id,
@@ -183,7 +228,6 @@ async function handleMessage(msg) {
         return;
     }
 
-    // کنترل اسپم برای چت شخصی
     const spamSeconds = checkSpam(userId);
     if (spamSeconds > 0 && !await isAdminOrOwner(userId)) {
         const mins = Math.ceil(spamSeconds / 60);
@@ -193,6 +237,9 @@ async function handleMessage(msg) {
         });
         return;
     }
+
+    if (!db.users) db.users = {};
+    if (!db.all_users) db.all_users = [];
 
     if (!db.users[userId]) {
         db.users[userId] = {
@@ -240,6 +287,8 @@ async function handleMessage(msg) {
         }
     }
 
+    if (!db.actions) db.actions = {};
+
     if (text === "🔙 بازگشت" || text === "/start") {
         delete db.actions[userId];
         saveDatabase();
@@ -262,7 +311,7 @@ async function handleMessage(msg) {
     }
 
     if (text === "😎 گاسم، پروکسی بده") {
-        if (db.proxies.length === 0) {
+        if (!db.proxies || db.proxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ فعلاً انبار حاجی خالیه رفیق! به‌زودی پروکسی میذاریم." });
             return;
         }
@@ -285,7 +334,7 @@ async function handleMessage(msg) {
     }
 
     if (text === "📶 تست پینگ پروکسی‌ها") {
-        if (db.proxies.length === 0) {
+        if (!db.proxies || db.proxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ انباری برای تست پینگ وجود ندارد." });
             return;
         }
@@ -315,7 +364,7 @@ async function handleMessage(msg) {
     }
 
     if (text === "⚡️ اتصال شانسی (تک‌کلیکی)") {
-        if (db.proxies.length === 0) {
+        if (!db.proxies || db.proxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ انبار حاجی خالیه رفیق! فعلاً پروکسی وجود نداره." });
             return;
         }
@@ -360,6 +409,7 @@ async function handleMessage(msg) {
 
     if (text === "📦 حاجی شارژ کن") {
         const today = new Date().toISOString().split('T')[0];
+        if (!db.daily_req) db.daily_req = {};
         const reqKey = `${userId}:${today}`;
 
         if (db.daily_req[reqKey]) {
@@ -403,7 +453,7 @@ async function handleMessage(msg) {
     }
 
     if (text === "👑 معاون ها باشه" && isOwner(userId)) {
-        const adminIds = Object.keys(db.admins).filter(id => db.admins[id]);
+        const adminIds = db.admins ? Object.keys(db.admins).filter(id => db.admins[id]) : [];
         if (adminIds.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ هیچ معاون فعالی ثبت نشده است." });
             return;
@@ -420,7 +470,7 @@ async function handleMessage(msg) {
     }
 
     if (text === "👥 لشکر حاجی" && await isAdminOrOwner(userId)) {
-        if (db.all_users.length === 0) {
+        if (!db.all_users || db.all_users.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ هیچ کاربری ثبت نشده است." });
             return;
         }
@@ -470,7 +520,7 @@ async function handleMessage(msg) {
     }
 
     if (text === "❌ فرستادن پروکسی به بازنشستگی" && await isAdminOrOwner(userId)) {
-        if (db.proxies.length === 0) {
+        if (!db.proxies || db.proxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ پروکسی فعالی وجود ندارد." });
             return;
         }
@@ -534,20 +584,22 @@ async function handleMessage(msg) {
     if (action) {
         if (action === "broadcast") {
             const broadcastMsg = `🚨 خبر از دفتر حاج گاسم:\n📩 پیام مدیریت:\n${text}\n\nحاجی گفت اینو بهتون بگیم 😎`;
-            for (let uId of db.all_users) {
-                let userKeyboard = [
-                    [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-                    [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                    [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }]
-                ];
-                if (await isAdminOrOwner(uId)) {
-                    userKeyboard.push([{ text: "👑 فرماندهی حاجی" }]);
+            if (db.all_users) {
+                for (let uId of db.all_users) {
+                    let userKeyboard = [
+                        [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+                        [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
+                        [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }]
+                    ];
+                    if (await isAdminOrOwner(uId)) {
+                        userKeyboard.push([{ text: "👑 فرماندهی حاجی" }]);
+                    }
+                    await sendTelegram("sendMessage", {
+                        chat_id: uId,
+                        text: broadcastMsg,
+                        reply_markup: { keyboard: userKeyboard, resize_keyboard: true }
+                    });
                 }
-                await sendTelegram("sendMessage", {
-                    chat_id: uId,
-                    text: broadcastMsg,
-                    reply_markup: { keyboard: userKeyboard, resize_keyboard: true }
-                });
             }
             delete db.actions[userId];
             saveDatabase();
@@ -561,6 +613,7 @@ async function handleMessage(msg) {
 
         if (action === "add_proxy") {
             const proxyLink = text.trim();
+            if (!db.proxies) db.proxies = [];
             const numbersMap = ["اولین", "دومین", "سومین", "چهارمین", "پنجمین", "ششمین", "هفتمین", "هشتمین", "نهمین", "دهمین"];
             let proxyName = numbersMap[db.proxies.length] ? `${numbersMap[db.proxies.length]} پروکسی` : `پروکسی شماره ${db.proxies.length + 1}`;
 
@@ -598,7 +651,7 @@ async function handleMessage(msg) {
         if (action === "ban_reason") {
             const targetId = db.actions[`temp_ban_${userId}`];
             const reason = text.trim();
-            if (db.users[targetId]) {
+            if (db.users && db.users[targetId]) {
                 db.users[targetId].is_banned = true;
                 db.users[targetId].ban_reason = reason;
                 await sendTelegram("sendMessage", {
@@ -619,7 +672,7 @@ async function handleMessage(msg) {
 
         if (action === "unban_target") {
             const targetId = text.trim();
-            if (db.users[targetId]) {
+            if (db.users && db.users[targetId]) {
                 db.users[targetId].is_banned = false;
                 db.users[targetId].ban_reason = "";
                 await sendTelegram("sendMessage", {
@@ -639,6 +692,7 @@ async function handleMessage(msg) {
 
         if (action === "add_admin") {
             const newAdminId = text.trim();
+            if (!db.admins) db.admins = {};
             db.admins[newAdminId] = true;
             delete db.actions[userId];
             saveDatabase();
@@ -653,7 +707,7 @@ async function handleMessage(msg) {
 
         if (action === "remove_admin") {
             const remAdminId = text.trim();
-            delete db.admins[remAdminId];
+            if (db.admins) delete db.admins[remAdminId];
             delete db.actions[userId];
             saveDatabase();
             await sendTelegram("sendMessage", { chat_id: remAdminId, text: "⚠️ شما توسط حاجی از مدیریت حذف شدید." });
@@ -692,6 +746,7 @@ async function handleMessage(msg) {
         }
     }
 
+    if (!db.support_targets) db.support_targets = {};
     let replyTarget = db.support_targets[userId];
     if (replyTarget) {
         delete db.support_targets[userId];
@@ -741,10 +796,9 @@ async function handleCallbackQuery(cq) {
         return;
     }
 
-    // ثبت ستاره برای پروکسی‌ها
     if (data.startsWith("star_proxy_")) {
         const index = parseInt(data.replace("star_proxy_", ""));
-        if (db.proxies[index]) {
+        if (db.proxies && db.proxies[index]) {
             if (!db.proxies[index].stars) db.proxies[index].stars = 0;
             db.proxies[index].stars += 1;
             saveDatabase();
@@ -757,7 +811,7 @@ async function handleCallbackQuery(cq) {
 
     if (data.startsWith("del_proxy_")) {
         const index = parseInt(data.replace("del_proxy_", ""));
-        if (db.proxies[index]) {
+        if (db.proxies && db.proxies[index]) {
             db.proxies.splice(index, 1);
             saveDatabase();
         }
@@ -772,6 +826,7 @@ async function handleCallbackQuery(cq) {
 
     if (data.startsWith("reply_sup_")) {
         const targetUserId = data.replace("reply_sup_", "");
+        if (!db.support_targets) db.support_targets = {};
         db.support_targets[userId] = targetUserId;
         saveDatabase();
         await sendTelegram("sendMessage", {
