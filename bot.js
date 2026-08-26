@@ -231,10 +231,8 @@ async function handleMessage(msg) {
         return;
     }
 
-    // بررسی حالت تعمیر و خاموشی ربات
     const userIsAdmin = await isAdminOrOwner(userId);
     if (db.bot_settings && db.bot_settings.is_maintenance && !userIsAdmin) {
-        // بررسی اینکه اگر ادمین دکمه‌ای در حالت اکشن دارد بگذرد یا برای کاربران عادی پیام استراحت برود
         let action = db.actions && db.actions[userId];
         if (!action) {
             const reason = db.bot_settings.maintenance_reason || "در حال بروزرسانی سیستم";
@@ -310,7 +308,6 @@ async function handleMessage(msg) {
     if (!db.actions) db.actions = {};
 
     if (text === "🔙 بازگشت" || text.startsWith("/start")) {
-        // اگر کاربر قبلاً ربات را استارت کرده باشد و مجدد استارت بزند یا با لینک بیاید
         if (text.startsWith("/start") && !isNewUser) {
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
@@ -348,12 +345,11 @@ async function handleMessage(msg) {
         let inlineKeyboard = [];
         db.proxies.forEach((p, index) => {
             let starsCount = p.stars || 0;
-            let row = [{ text: `🔗 ${p.name} (⭐ ${starsCount})`, url: p.link }];
-            if (isOwner(userId)) {
-                row.push({ text: `⭐ ثبت امتیاز`, callback_data: `admin_star_${index}` });
-            } else {
-                row.push({ text: `⭐ پسندیدم`, callback_data: `star_proxy_${index}` });
-            }
+            let row = [
+                { text: `🔗 ${p.name} (⭐ ${starsCount})`, url: p.link },
+                { text: "⭐ پسندیدم", callback_data: `star_proxy_${index}` },
+                { text: "🚨 گزارش قطعی", callback_data: `report_proxy_${index}` }
+            ];
             inlineKeyboard.push(row);
         });
 
@@ -377,12 +373,11 @@ async function handleMessage(msg) {
         for (let i = 0; i < db.proxies.length; i++) {
             let p = db.proxies[i];
             let pingResult = await pingProxy(p.link);
-            let row = [{ text: `🔗 ${p.name} [${pingResult}]`, url: p.link }];
-            if (isOwner(userId)) {
-                row.push({ text: `⭐ (${p.stars || 0})`, callback_data: `admin_star_${i}` });
-            } else {
-                row.push({ text: `⭐ (${p.stars || 0})`, callback_data: `star_proxy_${i}` });
-            }
+            let row = [
+                { text: `🔗 ${p.name} [${pingResult}]`, url: p.link },
+                { text: `⭐ (${p.stars || 0})`, callback_data: `star_proxy_${i}` },
+                { text: "🚨 گزارش قطعی", callback_data: `report_proxy_${i}` }
+            ];
             inlineKeyboard.push(row);
         }
 
@@ -408,13 +403,12 @@ async function handleMessage(msg) {
         const randomProxy = db.proxies[randomIndex];
 
         let inlineKeyboard = [
-            [{ text: "⚡️ بزن برای اتصال فوری به پروکسی", url: randomProxy.link }]
+            [{ text: "⚡️ بزن برای اتصال فوری به پروکسی", url: randomProxy.link }],
+            [
+                { text: "⭐ پسندیدم", callback_data: `star_proxy_${randomIndex}` },
+                { text: "🚨 گزارش قطعی", callback_data: `report_proxy_${randomIndex}` }
+            ]
         ];
-        if (isOwner(userId)) {
-            inlineKeyboard.push([{ text: "⭐ ثبت امتیاز دلخواه", callback_data: `admin_star_${randomIndex}` }]);
-        } else {
-            inlineKeyboard.push([{ text: "⭐ پسندیدم", callback_data: `star_proxy_${randomIndex}` }]);
-        }
 
         await sendTelegram("sendMessage", {
             chat_id: chatId,
@@ -529,7 +523,6 @@ async function handleMessage(msg) {
         }
         saveDatabase();
 
-        // ارسال پیام بازگشت برای همه کاربران
         const returnMsg = `🚀 حاج گاسم دوباره برگشت! 🧔‍♂️🔥\nسلام رفیق 👋😎\n✅ ربات با موفقیت فعال شد و آماده خدمت‌رسانی به شماست.\n📡 پروکسی‌ها آماده دریافت هستند\n⚡ سیستم‌ها آنلاین و بدون مشکل در حال کار می‌باشند\nممنون از صبر و همراهی شما ❤️\n🧔‍♂️ Gasem ProMax 🚀`;
         
         if (db.all_users) {
@@ -1018,6 +1011,33 @@ async function handleCallbackQuery(cq) {
             });
         } else {
             await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "⚠️ این پروکسی دیگر موجود نیست." });
+        }
+        return;
+    }
+
+    if (data.startsWith("report_proxy_")) {
+        const index = parseInt(data.replace("report_proxy_", ""));
+        if (db.proxies && db.proxies[index]) {
+            const proxyName = db.proxies[index].name;
+            const user = cq.from;
+            const userFullName = (user.first_name || "") + " " + (user.last_name || "");
+            const userUsername = user.username ? `@${user.username}` : "ندارد";
+
+            const reportMsg = `🚨 **گزارش خرابی پروکسی**\n\n📦 پروکسی: ${proxyName}\n👤 کاربر: ${userFullName}\n🔗 آیدی: ${userUsername}\n🆔 آیدی عددی: <code>${user.id}</code>\n\n⚠️ کاربر گزارش زد که این پروکسی کار نمی‌کند. لطفاً تعویض یا جدید بگذارید! 🛠`;
+            
+            await sendTelegram("sendMessage", {
+                chat_id: OWNER_ID,
+                text: reportMsg,
+                parse_mode: "HTML"
+            });
+
+            await sendTelegram("answerCallbackQuery", {
+                callback_query_id: cq.id,
+                text: "✅ گزارش خرابی برای مدیر ارسال شد. ممنون از همکاریت رفیق!",
+                show_alert: true
+            });
+        } else {
+            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "⚠️ این پروکسی یافت نشد." });
         }
         return;
     }
