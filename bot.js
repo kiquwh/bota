@@ -317,11 +317,13 @@ async function handleMessage(msg) {
 
         delete db.actions[userId];
         saveDatabase();
+        
+        // دکمه‌های رنگی شده با ایموجی‌های سبز، آبی، زرد و قرمز
         let keyboard = [
-            [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-            [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
+            [{ text: "🟢 گاسم، پروکسی بده" }, { text: "🔵 اتصال شانسی (تک‌کلیکی)" }],
+            [{ text: "🟡 تست پینگ پروکسی‌ها" }, { text: "🟠 آپدیت کن حاج گاسمو" }],
             [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-            [{ text: "🤝 حمایت از حاجی" }]
+            [{ text: "🤝 حمایت از حاجی" }, { text: "🔴 راهنمای ربات" }]
         ];
 
         if (await isAdminOrOwner(userId)) {
@@ -336,7 +338,15 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "😎 گاسم، پروکسی بده") {
+    if (text === "🔴 راهنمای ربات") {
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: `🤖 **راهنمای کامل ربات حاج گاسم** 🧔‍♂️\n\nاین ربات یک پاتوق اختصاصی برای دریافت پروکسی‌های پرسرعت، رایگان و امن تلگرام است.\n\n🔹 **امکانات اصلی ربات:**\n- **گاسم، پروکسی بده:** دریافت لیست کامل پروکسی‌های فعال انبار.\n- **اتصال شانسی:** اتصال سریع و رندوم با یک کلیک به یکی از پروکسی‌ها.\n- **تست پینگ:** بررسی سرعت و وضعیت اتصال پروکسی‌ها (آنلاین/آفلاین).\n- **حاجی شارژ کن:** ارسال درخواست شارژ انبار و پروکسی جدید به مدیریت.\n- **حمایت از حاجی:** دریافت لینک اختصاصی برای دعوت دوستان و بزرگ کردن لشکر حاجی.\n\nبا دکمه‌های رنگی منو به راحتی می‌تونی به بخش‌های مختلف دسترسی داشته باشی! 🚀`
+        });
+        return;
+    }
+
+    if (text === "🟢 گاسم، پروکسی بده") {
         if (!db.proxies || db.proxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ فعلاً انبار حاجی خالیه رفیق! به‌زودی پروکسی میذاریم." });
             return;
@@ -361,7 +371,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "📶 تست پینگ پروکسی‌ها") {
+    if (text === "🟡 تست پینگ پروکسی‌ها") {
         if (!db.proxies || db.proxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ انباری برای تست پینگ وجود ندارد." });
             return;
@@ -394,7 +404,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "⚡️ اتصال شانسی (تک‌کلیکی)") {
+    if (text === "🔵 اتصال شانسی (تک‌کلیکی)") {
         if (!db.proxies || db.proxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ انبار حاجی خالیه رفیق! فعلاً پروکسی وجود نداره." });
             return;
@@ -420,7 +430,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "🔁 آپدیت کن حاج گاسمو") {
+    if (text === "🟠 آپدیت کن حاج گاسمو") {
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "✅ حاج گاسم آپدیت شد!",
@@ -530,10 +540,10 @@ async function handleMessage(msg) {
         if (db.all_users) {
             for (let uId of db.all_users) {
                 let userKeyboard = [
-                    [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-                    [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
+                    [{ text: "🟢 گاسم، پروکسی بده" }, { text: "🔵 اتصال شانسی (تک‌کلیکی)" }],
+                    [{ text: "🟡 تست پینگ پروکسی‌ها" }, { text: "🟠 آپدیت کن حاج گاسمو" }],
                     [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-                    [{ text: "🤝 حمایت از حاجی" }]
+                    [{ text: "🤝 حمایت از حاجی" }, { text: "🔴 راهنمای ربات" }]
                 ];
                 if (await isAdminOrOwner(uId)) {
                     userKeyboard.push([{ text: "👑 فرماندهی حاجی" }]);
@@ -730,10 +740,10 @@ async function handleMessage(msg) {
                     text: `✅ تعداد ${starAmount} ستاره به پروکسی "${db.proxies[proxyIndex].name}" اضافه شد!\nمجموع ستاره‌ها: ${db.proxies[proxyIndex].stars} ⭐`,
                     reply_markup: {
                         keyboard: [
-                            [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-                            [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
+                            [{ text: "🟢 گاسم، پروکسی بده" }, { text: "🔵 اتصال شانسی (تک‌کلیکی)" }],
+                            [{ text: "🟡 تست پینگ پروکسی‌ها" }, { text: "🟠 آپدیت کن حاج گاسمو" }],
                             [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-                            [{ text: "🤝 حمایت از حاجی" }],
+                            [{ text: "🤝 حمایت از حاجی" }, { text: "🔴 راهنمای ربات" }],
                             [await isAdminOrOwner(userId) ? { text: "👑 فرماندهی حاجی" } : null].filter(Boolean)
                         ],
                         resize_keyboard: true
@@ -751,10 +761,10 @@ async function handleMessage(msg) {
             if (db.all_users) {
                 for (let uId of db.all_users) {
                     let userKeyboard = [
-                        [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-                        [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
+                        [{ text: "🟢 گاسم، پروکسی بده" }, { text: "🔵 اتصال شانسی (تک‌کلیکی)" }],
+                        [{ text: "🟡 تست پینگ پروکسی‌ها" }, { text: "🟠 آپدیت کن حاج گاسمو" }],
                         [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-                        [{ text: "🤝 حمایت از حاجی" }]
+                        [{ text: "🤝 حمایت از حاجی" }, { text: "🔴 راهنمای ربات" }]
                     ];
                     if (await isAdminOrOwner(uId)) {
                         userKeyboard.push([{ text: "👑 فرماندهی حاجی" }]);
@@ -899,10 +909,10 @@ async function handleMessage(msg) {
                 text: "✅ پیام شما به پشتیبانی ارسال شد.",
                 reply_markup: {
                     keyboard: [
-                        [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-                        [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
+                        [{ text: "🟢 گاسم، پروکسی بده" }, { text: "🔵 اتصال شانسی (تک‌کلیکی)" }],
+                        [{ text: "🟡 تست پینگ پروکسی‌ها" }, { text: "🟠 آپدیت کن حاج گاسمو" }],
                         [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-                        [{ text: "🤝 حمایت از حاجی" }],
+                        [{ text: "🤝 حمایت از حاجی" }, { text: "🔴 راهنمای ربات" }],
                         [await isAdminOrOwner(userId) ? { text: "👑 فرماندهی حاجی" } : null].filter(Boolean)
                     ],
                     resize_keyboard: true
@@ -944,10 +954,10 @@ async function handleCallbackQuery(cq) {
             await sendTelegram("deleteMessage", { chat_id: chatId, message_id: messageId });
             
             let keyboard = [
-                [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-                [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
+                [{ text: "🟢 گاسم، پروکسی بده" }, { text: "🔵 اتصال شانسی (تک‌کلیکی)" }],
+                [{ text: "🟡 تست پینگ پروکسی‌ها" }, { text: "🟠 آپدیت کن حاج گاسمو" }],
                 [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-                [{ text: "🤝 حمایت از حاجی" }]
+                [{ text: "🤝 حمایت از حاجی" }, { text: "🔴 راهنمای ربات" }]
             ];
             if (await isAdminOrOwner(userId)) {
                 keyboard.push([{ text: "👑 فرماندهی حاجی" }]);
