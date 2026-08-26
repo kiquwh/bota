@@ -347,7 +347,7 @@ async function handleMessage(msg) {
             let starsCount = p.stars || 0;
             let row = [
                 { text: `🔗 ${p.name}`, url: p.link },
-                { text: `⭐ ${starsCount}`, callback_data: `star_proxy_${index}` },
+                { text: `⭐ ${starsCount}`, callback_data: isOwner(userId) ? `admin_star_${index}` : `star_proxy_${index}` },
                 { text: "🚨 گزارش", callback_data: `report_proxy_${index}` }
             ];
             inlineKeyboard.push(row);
@@ -376,7 +376,7 @@ async function handleMessage(msg) {
             let starsCount = p.stars || 0;
             let row = [
                 { text: `🔗 ${p.name} [${pingResult}]`, url: p.link },
-                { text: `⭐ ${starsCount}`, callback_data: `star_proxy_${i}` },
+                { text: `⭐ ${starsCount}`, callback_data: isOwner(userId) ? `admin_star_${i}` : `star_proxy_${i}` },
                 { text: "🚨 گزارش", callback_data: `report_proxy_${i}` }
             ];
             inlineKeyboard.push(row);
@@ -407,7 +407,7 @@ async function handleMessage(msg) {
         let inlineKeyboard = [
             [{ text: "⚡️ بزن برای اتصال فوری به پروکسی", url: randomProxy.link }],
             [
-                { text: `⭐ پسندیدم (${starsCount})`, callback_data: `star_proxy_${randomIndex}` },
+                { text: `⭐ پسندیدم (${starsCount})`, callback_data: isOwner(userId) ? `admin_star_${randomIndex}` : `star_proxy_${randomIndex}` },
                 { text: "🚨 گزارش قطعی", callback_data: `report_proxy_${randomIndex}` }
             ]
         ];
