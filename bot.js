@@ -48,7 +48,6 @@ function saveDatabase() {
 
 loadDatabase();
 
-// تابع استاندارد برای ارتباط با تلگرام
 function sendTelegram(method, body) {
     return new Promise((resolve) => {
         const urlObj = new URL(`${TELEGRAM_API}/${method}`);
@@ -86,7 +85,6 @@ function sendTelegram(method, body) {
     });
 }
 
-// تابع تست پینگ واقعی پروکسی
 function pingProxy(proxyLink) {
     return new Promise((resolve) => {
         const startTime = Date.now();
@@ -151,7 +149,6 @@ function isOwner(userId) {
     return Number(userId) === Number(OWNER_ID);
 }
 
-// بررسی سیستم ضد اسپم (۸ بار در ۳۰ ثانیه) - کاملاً ایمن شده
 function checkSpam(userId) {
     const now = Date.now();
     
@@ -320,9 +317,11 @@ async function handleMessage(msg) {
         db.proxies.forEach((p, index) => {
             let starsCount = p.stars || 0;
             let row = [{ text: `🔗 ${p.name} (⭐ ${starsCount})`, url: p.link }];
-            // اگر کاربر مالک است، دکمه مدیریت ستاره هم زیرش بیاد
+            // اگر مالک است دکمه ثبت امتیاز دلخواه، وگرنه دکمه امتیاز دهی تکی عادی
             if (isOwner(userId)) {
                 row.push({ text: `⭐ ثبت امتیاز`, callback_data: `admin_star_${index}` });
+            } else {
+                row.push({ text: `⭐ پسندیدم`, callback_data: `star_proxy_${index}` });
             }
             inlineKeyboard.push(row);
         });
@@ -382,6 +381,8 @@ async function handleMessage(msg) {
         ];
         if (isOwner(userId)) {
             inlineKeyboard.push([{ text: "⭐ ثبت امتیاز دلخواه", callback_data: `admin_star_${randomIndex}` }]);
+        } else {
+            inlineKeyboard.push([{ text: "⭐ پسندیدم", callback_data: `star_proxy_${randomIndex}` }]);
         }
 
         await sendTelegram("sendMessage", {
@@ -589,7 +590,6 @@ async function handleMessage(msg) {
 
     let action = db.actions[userId];
     if (action) {
-        // مدیریت افزودن تعداد ستاره دلخواه توسط مالک
         if (action.startsWith("input_star_")) {
             const proxyIndex = parseInt(action.replace("input_star_", ""));
             const starAmount = parseInt(text.trim());
@@ -838,7 +838,6 @@ async function handleCallbackQuery(cq) {
         return;
     }
 
-    // وقتی مالک روی دکمه ثبت امتیاز می‌زنه
     if (data.startsWith("admin_star_")) {
         if (!isOwner(userId)) {
             await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "❌ این قابلیت فقط برای مالک ربات است!", show_alert: true });
