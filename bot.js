@@ -6,7 +6,6 @@ const path = require('path');
 const BOT_TOKEN = "8751373370:AAFDeoi7OIeelK53RJYrh9xgsvY0HVy8oGI";
 const OWNER_ID = 8854073031;
 const CHANNEL_USERNAME = "@Hajghasem12"; 
-const BOT_USERNAME = "HajGhasemRobot"; // آیدی ربات خودت رو بدون @ اینجا دقیق بنویس
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'data');
@@ -25,8 +24,7 @@ let db = {
     daily_req: {},
     support_targets: {},
     spam_control: {},
-    voted_proxies: {},
-    referrals: {} // ذخیره زیرمجموعه‌ها: { inviterId: [userId1, userId2, ...] }
+    voted_proxies: {}
 };
 
 function loadDatabase() {
@@ -35,7 +33,6 @@ function loadDatabase() {
             const data = fs.readFileSync(DB_FILE, 'utf8');
             db = JSON.parse(data);
             if (!db.voted_proxies) db.voted_proxies = {};
-            if (!db.referrals) db.referrals = {};
             console.log("Database loaded successfully.");
         }
     } catch (err) {
@@ -247,33 +244,13 @@ async function handleMessage(msg) {
             full_name: fullName,
             is_banned: false,
             ban_reason: "",
-            joined_at: new Date().toISOString(),
-            invited_by: null
+            joined_at: new Date().toISOString()
         };
 
         if (!db.all_users.includes(userId)) {
             db.all_users.push(userId);
         }
         saveDatabase();
-
-        // بررسی پارامتر ریفرال فقط برای کاربران کاملاً جدید
-        if (text.startsWith("/start ref_")) {
-            const inviterId = text.replace("/start ref_", "").trim();
-            if (inviterId && inviterId !== String(userId) && db.users[inviterId]) {
-                db.users[userId].invited_by = inviterId;
-                if (!db.referrals) db.referrals = {};
-                if (!db.referrals[inviterId]) db.referrals[inviterId] = [];
-                if (!db.referrals[inviterId].includes(userId)) {
-                    db.referrals[inviterId].push(userId);
-                    saveDatabase();
-                    // اطلاع‌رسانی به دعوت‌کننده
-                    await sendTelegram("sendMessage", {
-                        chat_id: inviterId,
-                        text: `🎉 رفیق یک نفر برای اولین بار با لینک دعوت شما وارد ربات شد!\n👤 نام: ${fullName}`
-                    });
-                }
-            }
-        }
 
         const notifyText = `🚨 کاربر جدید ربات رو استارت کرد!\n👤 نام: ${fullName}\n🔗 آیدی: ${username}\n🆔 آیدی عددی: <code>${userId}</code>`;
         await sendTelegram("sendMessage", { chat_id: OWNER_ID, text: notifyText, parse_mode: "HTML" });
@@ -314,8 +291,7 @@ async function handleMessage(msg) {
         let keyboard = [
             [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
             [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-            [{ text: "🛠 پشتیبانی حاجی" }, { text: "🤝 حمایت از حاجی" }],
-            [{ text: "📦 حاجی شارژ کن" }]
+            [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }]
         ];
 
         if (await isAdminOrOwner(userId)) {
@@ -326,20 +302,6 @@ async function handleMessage(msg) {
             chat_id: chatId,
             text: `🧔‍♂️ سلام رفیق، خوش اومدی به حاج گاسم 😎\n📡 اینجا پاتوق پروکسی‌های رایگان و آماده‌ی حرکته!\nحاج گاسم هر روز می‌گرده، پروکسی‌های بهتر رو پیدا می‌کنه و میاره برات 🚀`,
             reply_markup: { keyboard: keyboard, resize_keyboard: true }
-        });
-        return;
-    }
-
-    if (text === "🤝 حمایت از حاجی") {
-        await sendTelegram("sendMessage", {
-            chat_id: chatId,
-            text: `🤝 رفیق برای حمایت از حاج گاسم می‌تونی دوستات رو دعوت کنی یا لیدربورد رو چک کنی:\n\n👇 یکی از گزینه‌های زیر رو انتخاب کن:`,
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: "🔗 لینک دعوت اختصاصی من", callback_data: "support_my_invite" }],
-                    [{ text: "🏆 لیدربورد حمایت‌کنندگان", callback_data: "support_leaderboard" }]
-                ]
-            }
         });
         return;
     }
@@ -647,8 +609,7 @@ async function handleMessage(msg) {
                         keyboard: [
                             [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
                             [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                            [{ text: "🛠 پشتیبانی حاجی" }, { text: "🤝 حمایت از حاجی" }],
-                            [{ text: "📦 حاجی شارژ کن" }],
+                            [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
                             [await isAdminOrOwner(userId) ? { text: "👑 فرماندهی حاجی" } : null].filter(Boolean)
                         ],
                         resize_keyboard: true
@@ -668,8 +629,7 @@ async function handleMessage(msg) {
                     let userKeyboard = [
                         [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
                         [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                        [{ text: "🛠 پشتیبانی حاجی" }, { text: "🤝 حمایت از حاجی" }],
-                        [{ text: "📦 حاجی شارژ کن" }]
+                        [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }]
                     ];
                     if (await isAdminOrOwner(uId)) {
                         userKeyboard.push([{ text: "👑 فرماندهی حاجی" }]);
@@ -816,8 +776,7 @@ async function handleMessage(msg) {
                     keyboard: [
                         [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
                         [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                        [{ text: "🛠 پشتیبانی حاجی" }, { text: "🤝 حمایت از حاجی" }],
-                        [{ text: "📦 حاجی شارژ کن" }],
+                        [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
                         [await isAdminOrOwner(userId) ? { text: "👑 فرماندهی حاجی" } : null].filter(Boolean)
                     ],
                     resize_keyboard: true
@@ -861,8 +820,7 @@ async function handleCallbackQuery(cq) {
             let keyboard = [
                 [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
                 [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                [{ text: "🛠 پشتیبانی حاجی" }, { text: "🤝 حمایت از حاجی" }],
-                [{ text: "📦 حاجی شارژ کن" }]
+                [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }]
             ];
             if (await isAdminOrOwner(userId)) {
                 keyboard.push([{ text: "👑 فرماندهی حاجی" }]);
@@ -875,77 +833,6 @@ async function handleCallbackQuery(cq) {
         } else {
             await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "هنوز تو کانال عضو نشدی رفیق! اول عضو شو بعد دکمه رو بزن ⚠️", show_alert: true });
         }
-        return;
-    }
-
-    if (data === "support_my_invite") {
-        const inviteLink = `https://t.me/${BOT_USERNAME}?start=ref_${userId}`;
-        const myReferrals = db.referrals && db.referrals[userId] ? db.referrals[userId] : [];
-        
-        let listText = `🔗 لینک دعوت اختصاصی شما:\n<code>${inviteLink}</code>\n\n👥 تعداد افرادی که دعوت کردید: <b>${myReferrals.length}</b> نفر\n\n`;
-        if (myReferrals.length > 0) {
-            listText += "📋 لیست افرادی که دعوت کردید (فقط کاربران جدید):\n";
-            myReferrals.forEach((refId, idx) => {
-                let refUser = db.users[refId];
-                let refName = refUser ? refUser.full_name : "ناشناس";
-                listText += `${idx + 1}. ${refName} (🆔 <code>${refId}</code>)\n`;
-            });
-        } else {
-            listText += "⚠️ هنوز کسی رو با لینک اختصاصی خودت دعوت نکردی رفیق!";
-        }
-
-        await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id });
-        await sendTelegram("sendMessage", {
-            chat_id: chatId,
-            text: listText,
-            parse_mode: "HTML"
-        });
-        return;
-    }
-
-    if (data === "support_leaderboard") {
-        const myReferrals = db.referrals && db.referrals[userId] ? db.referrals[userId] : [];
-        const invitedCount = myReferrals.length;
-
-        if (invitedCount < 5 && !await isAdminOrOwner(userId)) {
-            await sendTelegram("answerCallbackQuery", { 
-                callback_query_id: cq.id, 
-                text: `⚠️ قفل است! شما تاکنون ${invitedCount} نفر دعوت کرده‌اید. برای باز شدن لیدربورد باید حداقل ۵ نفر را دعوت کنید!`, 
-                show_alert: true 
-            });
-            return;
-        }
-
-        let refStats = [];
-        if (db.referrals) {
-            for (let inviterId in db.referrals) {
-                refStats.push({
-                    inviterId: inviterId,
-                    count: db.referrals[inviterId].length
-                });
-            }
-        }
-        refStats.sort((a, b) => b.count - a.count);
-        let topList = refStats.slice(0, 10);
-
-        let lbText = `🏆 <b>لیدربورد حامیان حاج گاسم (برترین دعوت‌کنندگان)</b>\n\n`;
-        if (topList.length === 0) {
-            lbText += "هنوز کسی دعوتی ثبت نکرده است!";
-        } else {
-            topList.forEach((item, index) => {
-                let uData = db.users[item.inviterId];
-                let name = uData ? uData.full_name : "کاربر ناشناس";
-                let medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🔹";
-                lbText += `${medal} ${name} — <b>${item.count}</b> دعوت\n`;
-            });
-        }
-
-        await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id });
-        await sendTelegram("sendMessage", {
-            chat_id: chatId,
-            text: lbText,
-            parse_mode: "HTML"
-        });
         return;
     }
 
