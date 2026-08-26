@@ -6,7 +6,7 @@ const path = require('path');
 const BOT_TOKEN = "8751373370:AAFDeoi7OIeelK53RJYrh9xgsvY0HVy8oGI";
 const OWNER_ID = 8854073031;
 const CHANNEL_USERNAME = "@Hajghasem12"; 
-const BOT_USERNAME = "@HajGasemProxyBot"; // آیدی ربات برای ارجاع
+const BOT_USERNAME = "@HajGasemProxyBot";
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'data');
@@ -318,7 +318,6 @@ async function handleMessage(msg) {
         delete db.actions[userId];
         saveDatabase();
         
-        // دکمه‌های رنگی شده با ایموجی‌های سبز، آبی، زرد و قرمز
         let keyboard = [
             [{ text: "🟢 گاسم، پروکسی بده" }, { text: "🔵 اتصال شانسی (تک‌کلیکی)" }],
             [{ text: "🟡 تست پینگ پروکسی‌ها" }, { text: "🟠 آپدیت کن حاج گاسمو" }],
@@ -1083,29 +1082,33 @@ async function handleCallbackQuery(cq) {
     }
 }
 
-const server = http.createServer((req, res) => {
-    if (req.method === 'POST') {
-        let body = '';
-        req.on('data', chunk => { body += chunk.toString(); });
-        req.on('end', async () => {
-            try {
-                const update = JSON.parse(body);
-                await handleUpdate(update);
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ status: 'ok' }));
-            } catch (err) {
-                console.error(err);
-                res.writeHead(500, { 'Content-Type': 'text/plain' });
-                res.end('Internal Server Error');
+// سیستم Long Polling برای دریافت خودکار پیام‌ها بدون نیاز به Webhook
+let offset = 0;
+async function startPolling() {
+    console.log("Haj Gasem Bot is running via Long Polling... 😎");
+    while (true) {
+        try {
+            const res = await sendTelegram("getUpdates", { offset: offset, timeout: 30 });
+            if (res && res.ok && res.result) {
+                for (let update of res.result) {
+                    offset = update.update_id + 1;
+                    await handleUpdate(update);
+                }
             }
-        });
-    } else {
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('Haj Gasem Ultimate Bot is running! 😎');
+        } catch (err) {
+            console.error("Polling error:", err);
+        }
+        await new Promise(resolve => setTimeout(resolve, 1000));
     }
+}
+
+const server = http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain' });
+    res.end('Haj Gasem Ultimate Bot is running! 😎');
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    startPolling(); // شروع خودکار دریافت پیام‌ها
 });
