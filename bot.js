@@ -5,15 +5,14 @@ const BOT_TOKEN = "8751373370:AAFDeoi7OIeelK53RJYrh9xgsvY0HVy8oGI";
 const OWNER_ID = 8854073031;
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-// حافظه موقت (Memory Storage) برای جایگزینی KV روی سرور اختصاصی
 let db = {
-    users: {},          // اطلاعات کاربرها
-    all_users: [],      // لیست آیدی عددی همه کاربران
-    proxies: [],        // لیست پروکسی‌ها
-    admins: {},         // لیست ادمین‌ها/معاون‌ها
-    actions: {},        // وضعیت فعلی اکشن ادمین‌ها
-    daily_req: {},      // درخواست‌های روزانه شارژ
-    support_targets: {} // هدف‌های پاسخ پشتیبانی
+    users: {},
+    all_users: [],
+    proxies: [],
+    admins: {},
+    actions: {},
+    daily_req: {},
+    support_targets: {}
 };
 
 async function sendTelegram(method, body) {
@@ -39,7 +38,6 @@ function isOwner(userId) {
     return Number(userId) === Number(OWNER_ID);
 }
 
-// مدیریت پیام‌های دریافتی تلگرام
 async function handleUpdate(update) {
     try {
         if (update.callback_query) {
@@ -94,8 +92,9 @@ async function handleMessage(msg) {
     if (text === "🔙 بازگشت" || text === "/start") {
         delete db.actions[userId];
         let keyboard = [
-            [{ text: "😎 گاسم، پروکسی بده" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-            [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }]
+            [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+            [{ text: "🔁 آپدیت کن حاج گاسمو" }, { text: "🛠 پشتیبانی حاجی" }],
+            [{ text: "📦 حاجی شارژ کن" }]
         ];
 
         if (await isAdminOrOwner(userId)) {
@@ -104,7 +103,7 @@ async function handleMessage(msg) {
 
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: `🧔‍♂️ سلام رفیق، خوش اومدی به حاج گاسم 😎\n📡 اینجا پاتوق پروکسی‌های رایگان و آماده‌ی حرکته!\nحاج گاسم هر روز می‌گرده، پروکسی‌های بهتر رو پیدا می‌کنه و میاره برات 🚀\n\n🔥 امکانات:\n• دریافت پروکسی رایگان\n• پروکسی‌های جدید و بروزشده\n• استفاده سریع و راحت\n\n😎 فقط کافیه یه دکمه بزنی...\nبقیه کارا رو بسپار به حاج گاسم!\n⚡️ حاج گاسم؛ رفیقِ اتصال تو در روزای سخت 😂`,
+            text: `🧔‍♂️ سلام رفیق، خوش اومدی به حاج گاسم 😎\n📡 اینجا پاتوق پروکسی‌های رایگان و آماده‌ی حرکته!\nحاج گاسم هر روز می‌گرده، پروکسی‌های بهتر رو پیدا می‌کنه و میاره برات 🚀\n\n🔥 امکانات:\n• دریافت پروکسی رایگان و شانسی\n• پروکسی‌های جدید و بروزشده\n• استفاده سریع و راحت\n\n😎 فقط کافیه یه دکمه بزنی...\nبقیه کارا رو بسپار به حاج گاسم!`,
             reply_markup: { keyboard: keyboard, resize_keyboard: true }
         });
         return;
@@ -135,6 +134,29 @@ async function handleMessage(msg) {
             chat_id: chatId,
             text: "⚡️ لیست پروکسی‌های انبار حاجی",
             reply_markup: { inline_keyboard: inlineKeyboard }
+        });
+        return;
+    }
+
+    // قابلیت جذاب اتصال شانسی (تک‌کلیکی)
+    if (text === "⚡️ اتصال شانسی (تک‌کلیکی)") {
+        if (db.proxies.length === 0) {
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ انبار حاجی خالیه رفیق! فعلاً پروکسی وجود نداره." });
+            return;
+        }
+
+        // انتخاب تصادفی یک پروکسی از لیست
+        const randomIndex = Math.floor(Math.random() * db.proxies.length);
+        const randomProxy = db.proxies[randomIndex];
+
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: `🎲 شانس امروزت این دراومد رفیق!\n📦 نام: ${randomProxy.name}\n\nروی دکمه زیر بزن تا مستقیم متصل بشی:`,
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: "⚡️ بزن برای اتصال فوری به پروکسی", url: randomProxy.link }]
+                ]
+            }
         });
         return;
     }
@@ -330,8 +352,9 @@ async function handleMessage(msg) {
             const broadcastMsg = `🚨 خبر از دفتر حاج گاسم:\n📩 پیام مدیریت:\n${text}\n\nحاجی گفت اینو بهتون بگیم 😎`;
             for (let uId of db.all_users) {
                 let userKeyboard = [
-                    [{ text: "😎 گاسم، پروکسی بده" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                    [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }]
+                    [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+                    [{ text: "🔁 آپدیت کن حاج گاسمو" }, { text: "🛠 پشتیبانی حاجی" }],
+                    [{ text: "📦 حاجی شارژ کن" }]
                 ];
                 if (await isAdminOrOwner(uId)) {
                     userKeyboard.push([{ text: "👑 فرماندهی حاجی" }]);
@@ -464,8 +487,9 @@ async function handleMessage(msg) {
                 text: "✅ پیام شما به پشتیبانی ارسال شد.",
                 reply_markup: {
                     keyboard: [
-                        [{ text: "😎 گاسم، پروکسی بده" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                        [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
+                        [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+                        [{ text: "🔁 آپدیت کن حاج گاسمو" }, { text: "🛠 پشتیبانی حاجی" }],
+                        [{ text: "📦 حاجی شارژ کن" }],
                         [await isAdminOrOwner(userId) ? { text: "👑 فرماندهی حاجی" } : null].filter(Boolean)
                     ],
                     resize_keyboard: true
@@ -524,7 +548,6 @@ async function handleCallbackQuery(cq) {
     }
 }
 
-// راه‌اندازی سرور وب برای Railway
 const server = http.createServer((req, res) => {
     if (req.method === 'POST') {
         let body = '';
