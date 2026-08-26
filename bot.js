@@ -319,15 +319,17 @@ async function handleMessage(msg) {
         let inlineKeyboard = [];
         db.proxies.forEach((p, index) => {
             let starsCount = p.stars || 0;
-            inlineKeyboard.push([
-                { text: `🔗 ${p.name} (⭐ ${starsCount})`, url: p.link },
-                { text: `⭐ پسندیدم`, callback_data: `star_proxy_${index}` }
-            ]);
+            let row = [{ text: `🔗 ${p.name} (⭐ ${starsCount})`, url: p.link }];
+            // اگر کاربر مالک است، دکمه مدیریت ستاره هم زیرش بیاد
+            if (isOwner(userId)) {
+                row.push({ text: `⭐ ثبت امتیاز`, callback_data: `admin_star_${index}` });
+            }
+            inlineKeyboard.push(row);
         });
 
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: "⚡️ لیست پروکسی‌های انبار حاجی (محبوبیت رو با ستاره ببین و ثبت کن):",
+            text: "⚡️ لیست پروکسی‌های انبار حاجی:",
             reply_markup: { inline_keyboard: inlineKeyboard }
         });
         return;
@@ -345,10 +347,13 @@ async function handleMessage(msg) {
         for (let i = 0; i < db.proxies.length; i++) {
             let p = db.proxies[i];
             let pingResult = await pingProxy(p.link);
-            inlineKeyboard.push([
-                { text: `🔗 ${p.name} [${pingResult}]`, url: p.link },
-                { text: `⭐ (${p.stars || 0})`, callback_data: `star_proxy_${i}` }
-            ]);
+            let row = [{ text: `🔗 ${p.name} [${pingResult}]`, url: p.link }];
+            if (isOwner(userId)) {
+                row.push({ text: `⭐ (${p.stars || 0})`, callback_data: `admin_star_${i}` });
+            } else {
+                row.push({ text: `⭐ (${p.stars || 0})`, callback_data: `star_proxy_${i}` });
+            }
+            inlineKeyboard.push(row);
         }
 
         if (waitMsg && waitMsg.result) {
@@ -372,15 +377,17 @@ async function handleMessage(msg) {
         const randomIndex = Math.floor(Math.random() * db.proxies.length);
         const randomProxy = db.proxies[randomIndex];
 
+        let inlineKeyboard = [
+            [{ text: "⚡️ بزن برای اتصال فوری به پروکسی", url: randomProxy.link }]
+        ];
+        if (isOwner(userId)) {
+            inlineKeyboard.push([{ text: "⭐ ثبت امتیاز دلخواه", callback_data: `admin_star_${randomIndex}` }]);
+        }
+
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: `🎲 شانس امروزت این دراومد رفیق!\n📦 نام: ${randomProxy.name}\n⭐ محبوبیت: ${randomProxy.stars || 0}\n\nروی دکمه زیر بزن تا مستقیم متصل بشی:`,
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: "⚡️ بزن برای اتصال فوری به پروکسی", url: randomProxy.link }],
-                    [{ text: "⭐ پسندیدم اینو", callback_data: `star_proxy_${randomIndex}` }]
-                ]
-            }
+            reply_markup: { inline_keyboard: inlineKeyboard }
         });
         return;
     }
@@ -582,6 +589,41 @@ async function handleMessage(msg) {
 
     let action = db.actions[userId];
     if (action) {
+        // مدیریت افزودن تعداد ستاره دلخواه توسط مالک
+        if (action.startsWith("input_star_")) {
+            const proxyIndex = parseInt(action.replace("input_star_", ""));
+            const starAmount = parseInt(text.trim());
+
+            if (isNaN(starAmount)) {
+                await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ لطفاً یک عدد معتبر وارد کنید (مثلا 5):" });
+                return;
+            }
+
+            if (db.proxies && db.proxies[proxyIndex]) {
+                if (!db.proxies[proxyIndex].stars) db.proxies[proxyIndex].stars = 0;
+                db.proxies[proxyIndex].stars += starAmount;
+                saveDatabase();
+                delete db.actions[userId];
+                await sendTelegram("sendMessage", {
+                    chat_id: chatId,
+                    text: `✅ تعداد ${starAmount} ستاره به پروکسی "${db.proxies[proxyIndex].name}" اضافه شد!\nمجموع ستاره‌ها: ${db.proxies[proxyIndex].stars} ⭐`,
+                    reply_markup: {
+                        keyboard: [
+                            [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+                            [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
+                            [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
+                            [{ text: "👑 فرماندهی حاجی" }]
+                        ],
+                        resize_keyboard: true
+                    }
+                });
+            } else {
+                delete db.actions[userId];
+                await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ پروکسی مورد نظر یافت نشد." });
+            }
+            return;
+        }
+
         if (action === "broadcast") {
             const broadcastMsg = `🚨 خبر از دفتر حاج گاسم:\n📩 پیام مدیریت:\n${text}\n\nحاجی گفت اینو بهتون بگیم 😎`;
             if (db.all_users) {
@@ -792,6 +834,29 @@ async function handleCallbackQuery(cq) {
             });
         } else {
             await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "هنوز تو کانال عضو نشدی رفیق! اول عضو شو بعد دکمه رو بزن ⚠️", show_alert: true });
+        }
+        return;
+    }
+
+    // وقتی مالک روی دکمه ثبت امتیاز می‌زنه
+    if (data.startsWith("admin_star_")) {
+        if (!isOwner(userId)) {
+            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "❌ این قابلیت فقط برای مالک ربات است!", show_alert: true });
+            return;
+        }
+        const index = parseInt(data.replace("admin_star_", ""));
+        if (db.proxies && db.proxies[index]) {
+            if (!db.actions) db.actions = {};
+            db.actions[userId] = `input_star_${index}`;
+            saveDatabase();
+            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "لطفا تعداد ستاره را در چت ارسال کنید." });
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: `✍️ تعداد ستاره‌ای که می‌خواهید به پروکسی "${db.proxies[index].name}" اضافه شود را به صورت عدد ارسال کنید (مثلاً 5 یا 10):`,
+                reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+            });
+        } else {
+            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "⚠️ این پروکسی دیگر موجود نیست." });
         }
         return;
     }
