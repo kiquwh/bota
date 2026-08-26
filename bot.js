@@ -24,7 +24,7 @@ let db = {
     daily_req: {},
     support_targets: {},
     spam_control: {},
-    voted_proxies: {}
+    voted_proxies: {} // ذخیره اینکه چه کاربری به چه پروکسی ای رای داده
 };
 
 function loadDatabase() {
@@ -153,12 +153,16 @@ function isOwner(userId) {
 
 function checkSpam(userId) {
     const now = Date.now();
-    if (!db.spam_control) db.spam_control = {};
+    
+    if (!db.spam_control) {
+        db.spam_control = {};
+    }
     if (!db.spam_control[userId]) {
         db.spam_control[userId] = { timestamps: [], blocked_until: 0 };
     }
     
     let userSpam = db.spam_control[userId];
+    
     if (userSpam.blocked_until > now) {
         return Math.ceil((userSpam.blocked_until - now) / 1000);
     }
@@ -171,6 +175,7 @@ function checkSpam(userId) {
         saveDatabase();
         return 1800;
     }
+    
     return 0;
 }
 
@@ -235,9 +240,7 @@ async function handleMessage(msg) {
     if (!db.users) db.users = {};
     if (!db.all_users) db.all_users = [];
 
-    let isNewUser = !db.users[userId];
-
-    if (isNewUser) {
+    if (!db.users[userId]) {
         db.users[userId] = {
             id_code: userId,
             username: username,
@@ -285,7 +288,7 @@ async function handleMessage(msg) {
 
     if (!db.actions) db.actions = {};
 
-    if (text === "🔙 بازگشت" || text.startsWith("/start")) {
+    if (text === "🔙 بازگشت" || text === "/start") {
         delete db.actions[userId];
         saveDatabase();
         let keyboard = [
@@ -610,7 +613,7 @@ async function handleMessage(msg) {
                             [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
                             [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
                             [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-                            [await isAdminOrOwner(userId) ? { text: "👑 فرماندهی حاجی" } : null].filter(Boolean)
+                            [{ text: "👑 فرماندهی حاجی" }]
                         ],
                         resize_keyboard: true
                     }
@@ -864,6 +867,7 @@ async function handleCallbackQuery(cq) {
         if (!db.voted_proxies) db.voted_proxies = {};
         if (!db.voted_proxies[userId]) db.voted_proxies[userId] = {};
 
+        // بررسی اینکه آیا کاربر قبلاً به این پروکسی رای داده است یا خیر
         if (db.voted_proxies[userId][index]) {
             await sendTelegram("answerCallbackQuery", { 
                 callback_query_id: cq.id, 
@@ -877,6 +881,7 @@ async function handleCallbackQuery(cq) {
             if (!db.proxies[index].stars) db.proxies[index].stars = 0;
             db.proxies[index].stars += 1;
             
+            // ثبت رای کاربر برای این پروکسی خاص
             db.voted_proxies[userId][index] = true;
             saveDatabase();
 
