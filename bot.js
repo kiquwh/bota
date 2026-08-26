@@ -5,18 +5,16 @@ const path = require('path');
 
 const BOT_TOKEN = "8751373370:AAFDeoi7OIeelK53RJYrh9xgsvY0HVy8oGI";
 const OWNER_ID = 8854073031;
+const CHANNEL_USERNAME = "@Hajghasem12"; // آیدی کانال برای عضویت اجباری
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
-// مسیر ذخیره اطلاعات در Volume ریلیوی
 const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'data');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 
-// مطمئن شویم پوشه وجود دارد
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// لود کردن دیتابیس از فایل
 let db = {
     users: {},
     all_users: [],
@@ -39,7 +37,6 @@ function loadDatabase() {
     }
 }
 
-// ذخیره کردن دیتابیس در فایل
 function saveDatabase() {
     try {
         fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
@@ -61,6 +58,27 @@ async function sendTelegram(method, body) {
     } catch (err) {
         console.error("Telegram API Error:", err);
         return null;
+    }
+}
+
+// تابع بررسی عضویت کاربر در کانال
+async function checkMembership(userId) {
+    try {
+        const res = await sendTelegram("getChatMember", {
+            chat_id: CHANNEL_USERNAME,
+            user_id: userId
+        });
+        if (res && res.ok && res.result) {
+            const status = res.result.status;
+            // وضعیت‌های قابل قبول عضویت
+            if (["creator", "administrator", "member"].includes(status)) {
+                return true;
+            }
+        }
+        return false;
+    } catch (err) {
+        console.error("Error checking membership:", err);
+        return true; // اگر خطایی شد برای جلوگیری از قفل شدن ربات، عبور می‌دهیم
     }
 }
 
@@ -123,6 +141,24 @@ async function handleMessage(msg) {
             text: `🚫 حاج گاسم تصمیم گرفت! 🧔‍♂️\nسلام رفیق 👋\nدسترسی شما به ربات بسته شد ⛔\n📌 دلیل بن شدن:\n${userData.ban_reason || 'نامشخص'}\n📡 فعلاً پروکسی گرفتن از حاجی برای شما متوقف شده 😂\n👑 مدیریت حاج گاسم`
         });
         return;
+    }
+
+    // 🔒 بررسی عضویت اجباری در کانال (برای غیر-ادمین‌ها)
+    if (!await isAdminOrOwner(userId)) {
+        const isMember = await checkMembership(userId);
+        if (!isMember) {
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: `⚠️ رفیق عزیز برای استفاده از ربات حاج گاسم، اول باید توی کانال زیر عضو بشی:\n\n🔗 ${CHANNEL_USERNAME}\n\n👇 بعد از عضویت، روی دکمه‌ی زیر بزن تا رباتت فعال بشه:`,
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: "📢 ورود به کانال حاجی", url: `https://t.me/Hajghasem12` }],
+                        [{ text: "✅ عضو شدم، بررسی کن", callback_data: "check_join" }]
+                    ]
+                }
+            });
+            return;
+        }
     }
 
     if (text === "🔙 بازگشت" || text === "/start") {
@@ -576,6 +612,33 @@ async function handleCallbackQuery(cq) {
     const chatId = cq.message.chat.id;
     const messageId = cq.message.message_id;
 
+    // دکمه بررسی عضویت کانال
+    if (data === "check_join") {
+        const isMember = await checkMembership(userId);
+        if (isMember) {
+            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "عضویت شما تایید شد! خوش اومدی رفیق 🎉" });
+            await sendTelegram("deleteMessage", { chat_id: chatId, message_id: messageId });
+            
+            // ارسال پیام شروع مجدد
+            let keyboard = [
+                [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+                [{ text: "🔁 آپدیت کن حاج گاسمو" }, { text: "🛠 پشتیبانی حاجی" }],
+                [{ text: "📦 حاجی شارژ کن" }]
+            ];
+            if (await isAdminOrOwner(userId)) {
+                keyboard.push([{ text: "👑 فرماندهی حاجی" }]);
+            }
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: `🧔‍♂️ دمت گرم که عضو شدی! حالا ربات کاملاً برات فعاله. بزن بریم 😎`,
+                reply_markup: { keyboard: keyboard, resize_keyboard: true }
+            });
+        } else {
+            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "هنوز تو کانال عضو نشدی رفیق! اول عضو شو بعد دکمه رو بزن ⚠️", show_alert: true });
+        }
+        return;
+    }
+
     if (data.startsWith("del_proxy_")) {
         const index = parseInt(data.replace("del_proxy_", ""));
         if (db.proxies[index]) {
@@ -622,7 +685,7 @@ const server = http.createServer((req, res) => {
         });
     } else {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('Haj Gasem Bot is running with persistent storage on Railway! 😎');
+        res.end('Haj Gasem Bot with Force Join is running! 😎');
     }
 });
 
