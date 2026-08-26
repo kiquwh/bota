@@ -1,0 +1,553 @@
+const fetch = require('node-fetch');
+const http = require('http');
+
+const BOT_TOKEN = "8751373370:AAFDeoi7OIeelK53RJYrh9xgsvY0HVy8oGI";
+const OWNER_ID = 8854073031;
+const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
+
+// حافظه موقت (Memory Storage) برای جایگزینی KV روی سرور اختصاصی
+let db = {
+    users: {},          // اطلاعات کاربرها
+    all_users: [],      // لیست آیدی عددی همه کاربران
+    proxies: [],        // لیست پروکسی‌ها
+    admins: {},         // لیست ادمین‌ها/معاون‌ها
+    actions: {},        // وضعیت فعلی اکشن ادمین‌ها
+    daily_req: {},      // درخواست‌های روزانه شارژ
+    support_targets: {} // هدف‌های پاسخ پشتیبانی
+};
+
+async function sendTelegram(method, body) {
+    try {
+        const response = await fetch(`${TELEGRAM_API}/${method}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+        return await response.json();
+    } catch (err) {
+        console.error("Telegram API Error:", err);
+        return null;
+    }
+}
+
+async function isAdminOrOwner(userId) {
+    if (Number(userId) === Number(OWNER_ID)) return true;
+    return db.admins[userId] === true;
+}
+
+function isOwner(userId) {
+    return Number(userId) === Number(OWNER_ID);
+}
+
+// مدیریت پیام‌های دریافتی تلگرام
+async function handleUpdate(update) {
+    try {
+        if (update.callback_query) {
+            await handleCallbackQuery(update.callback_query);
+            return;
+        }
+
+        if (update.message) {
+            await handleMessage(update.message);
+            return;
+        }
+    } catch (err) {
+        console.error("Error handling update:", err);
+    }
+}
+
+async function handleMessage(msg) {
+    const chatId = msg.chat.id;
+    const userId = msg.from.id;
+    const text = msg.text || "";
+    const fullName = (msg.from.first_name || "") + " " + (msg.from.last_name || "");
+    const username = msg.from.username ? `@${msg.from.username}` : "ندارد";
+
+    if (!db.users[userId]) {
+        db.users[userId] = {
+            id_code: userId,
+            username: username,
+            full_name: fullName,
+            is_banned: false,
+            ban_reason: "",
+            joined_at: new Date().toISOString()
+        };
+
+        if (!db.all_users.includes(userId)) {
+            db.all_users.push(userId);
+        }
+
+        const notifyText = `🚨 کاربر جدید ربات رو استارت کرد!\n👤 نام: ${fullName}\n🔗 آیدی: ${username}\n🆔 آیدی عددی: <code>${userId}</code>`;
+        await sendTelegram("sendMessage", { chat_id: OWNER_ID, text: notifyText, parse_mode: "HTML" });
+    }
+
+    let userData = db.users[userId];
+
+    if (userData.is_banned && !await isAdminOrOwner(userId)) {
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: `🚫 حاج گاسم تصمیم گرفت! 🧔‍♂️\nسلام رفیق 👋\nدسترسی شما به ربات بسته شد ⛔\n📌 دلیل بن شدن:\n${userData.ban_reason || 'نامشخص'}\n📡 فعلاً پروکسی گرفتن از حاجی برای شما متوقف شده 😂\n👑 مدیریت حاج گاسم`
+        });
+        return;
+    }
+
+    if (text === "🔙 بازگشت" || text === "/start") {
+        delete db.actions[userId];
+        let keyboard = [
+            [{ text: "😎 گاسم، پروکسی بده" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
+            [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }]
+        ];
+
+        if (await isAdminOrOwner(userId)) {
+            keyboard.push([{ text: "👑 فرماندهی حاجی" }]);
+        }
+
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: `🧔‍♂️ سلام رفیق، خوش اومدی به حاج گاسم 😎\n📡 اینجا پاتوق پروکسی‌های رایگان و آماده‌ی حرکته!\nحاج گاسم هر روز می‌گرده، پروکسی‌های بهتر رو پیدا می‌کنه و میاره برات 🚀\n\n🔥 امکانات:\n• دریافت پروکسی رایگان\n• پروکسی‌های جدید و بروزشده\n• استفاده سریع و راحت\n\n😎 فقط کافیه یه دکمه بزنی...\nبقیه کارا رو بسپار به حاج گاسم!\n⚡️ حاج گاسم؛ رفیقِ اتصال تو در روزای سخت 😂`,
+            reply_markup: { keyboard: keyboard, resize_keyboard: true }
+        });
+        return;
+    }
+
+    if (text === "😎 گاسم، پروکسی بده") {
+        if (db.proxies.length === 0) {
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ فعلاً انبار حاجی خالیه رفیق! به‌زودی پروکسی میذاریم." });
+            return;
+        }
+
+        let inlineKeyboard = [];
+        let currentRow = [];
+
+        db.proxies.forEach((p) => {
+            currentRow.push({ text: `🔗 ${p.name}`, url: p.link });
+            if (currentRow.length === 2) {
+                inlineKeyboard.push(currentRow);
+                currentRow = [];
+            }
+        });
+
+        if (currentRow.length > 0) {
+            inlineKeyboard.push(currentRow);
+        }
+
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "⚡️ لیست پروکسی‌های انبار حاجی",
+            reply_markup: { inline_keyboard: inlineKeyboard }
+        });
+        return;
+    }
+
+    if (text === "🔁 آپدیت کن حاج گاسمو") {
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "✅ حاج گاسم آپدیت شد!",
+            reply_markup: { remove_keyboard: true }
+        });
+        msg.text = "/start";
+        await handleMessage(msg);
+        return;
+    }
+
+    if (text === "🛠 پشتیبانی حاجی") {
+        db.actions[userId] = "support_text";
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "✍️ لطفاً پیام خود را برای پشتیبانی ارسال کنید:",
+            reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+        });
+        return;
+    }
+
+    if (text === "📦 حاجی شارژ کن") {
+        const today = new Date().toISOString().split('T')[0];
+        const reqKey = `${userId}:${today}`;
+
+        if (db.daily_req[reqKey]) {
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ رفیق، شما امروز درخواست دادید! هر روز فقط یک بار می‌تونید درخواست کنید." });
+            return;
+        }
+
+        db.daily_req[reqKey] = true;
+        const reqMsg = `📦 کاربر درخواست پروکسی دارد!\n👤 نام: ${fullName}\n🆔 آیدی عددی: <code>${userId}</code>`;
+        await sendTelegram("sendMessage", { chat_id: OWNER_ID, text: reqMsg, parse_mode: "HTML" });
+        await sendTelegram("sendMessage", { chat_id: chatId, text: "✅ درخواست شما برای مدیریت ارسال شد. حاجی به‌زودی انبار رو شارژ می‌کنه! 😎" });
+        return;
+    }
+
+    if (text === "👑 فرماندهی حاجی") {
+        if (!await isAdminOrOwner(userId)) {
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "❌ شما دسترسی به این بخش ندارید!" });
+            return;
+        }
+
+        let adminKeyboard = [
+            [{ text: "🚨 اعلامیه حاجی" }, { text: "🛠 اضافه کردن سوغات حاجی" }],
+            [{ text: "📥 مکش پروکسی از کانال" }, { text: "❌ فرستادن پروکسی به بازنشستگی" }],
+            [{ text: "👥 لشکر حاجی" }, { text: "🚫 اخراج از جمع حاجی" }],
+            [{ text: "🧔‍♂️ حاجی بخشید" }]
+        ];
+
+        if (isOwner(userId)) {
+            adminKeyboard.push([{ text: "👑 معاون حاجی" }, { text: "❌ حذف معاون حاجی" }]);
+            adminKeyboard.push([{ text: "👑 معاون ها باشه" }]);
+        }
+        adminKeyboard.push([{ text: "🔙 بازگشت" }]);
+
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "👑 به پنل فرماندهی حاج گاسم خوش آمدید:",
+            reply_markup: { keyboard: adminKeyboard, resize_keyboard: true }
+        });
+        return;
+    }
+
+    if (text === "👑 معاون ها باشه" && isOwner(userId)) {
+        const adminIds = Object.keys(db.admins).filter(id => db.admins[id]);
+        if (adminIds.length === 0) {
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ هیچ معاون فعالی ثبت نشده است." });
+            return;
+        }
+        let listText = "👑 لیست معاون‌های حاجی:\n\n";
+        for (let admId of adminIds) {
+            let admData = db.users[admId];
+            let name = admData ? admData.full_name : "ناشناس";
+            let username = admData ? admData.username : "ندارد";
+            listText += `👤 نام: ${name}\n🔗 آیدی: ${username}\n🆔 آیدی عددی: <code>${admId}</code>\n------------------\n`;
+        }
+        await sendTelegram("sendMessage", { chat_id: chatId, text: listText, parse_mode: "HTML" });
+        return;
+    }
+
+    if (text === "👥 لشکر حاجی" && await isAdminOrOwner(userId)) {
+        if (db.all_users.length === 0) {
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ هیچ کاربری ثبت نشده است." });
+            return;
+        }
+        let userList = "👥 لشکر حاج گاسم:\n\n";
+        for (let uId of db.all_users) {
+            let uData = db.users[uId];
+            if (uData) {
+                let status = uData.is_banned ? " [بن شده]" : "";
+                userList += `👤 ${uData.full_name}\n🔗 ${uData.username}\n🆔 <code>${uData.id_code}</code>${status}\n------------------\n`;
+            }
+        }
+        await sendTelegram("sendMessage", { chat_id: chatId, text: userList, parse_mode: "HTML" });
+        return;
+    }
+
+    if (text === "🚨 اعلامیه حاجی" && await isAdminOrOwner(userId)) {
+        db.actions[userId] = "broadcast";
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "✍️ لطفاً متن اعلامیه خود را ارسال کنید:",
+            reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+        });
+        return;
+    }
+
+    if (text === "🛠 اضافه کردن سوغات حاجی" && await isAdminOrOwner(userId)) {
+        db.actions[userId] = "add_proxy";
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "🔗 لطفاً فقط لینک پروکسی را ارسال کنید:",
+            reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+        });
+        return;
+    }
+
+    if (text === "📥 مکش پروکسی از کانال" && await isAdminOrOwner(userId)) {
+        db.actions[userId] = "fetch_channel";
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "📡 آیدی یا لینک کانال مورد نظر را بفرستید (مثال: @ProxyChannel):",
+            reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+        });
+        return;
+    }
+
+    if (text === "❌ فرستادن پروکسی به بازنشستگی" && await isAdminOrOwner(userId)) {
+        if (db.proxies.length === 0) {
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ پروکسی فعالی وجود ندارد." });
+            return;
+        }
+        let inlineKeyboard = [];
+        db.proxies.forEach((p, index) => {
+            inlineKeyboard.push([{ text: `❌ حذف: ${p.name}`, callback_data: `del_proxy_${index}` }]);
+        });
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "🗑 برای حذف هر پروکسی روی دکمه‌ی آن بزنید:",
+            reply_markup: { inline_keyboard: inlineKeyboard }
+        });
+        return;
+    }
+
+    if (text === "🚫 اخراج از جمع حاجی" && await isAdminOrOwner(userId)) {
+        db.actions[userId] = "ban_target";
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "🆔 آیدی عددی کاربری که می‌خواهید بن کنید را بفرستید:",
+            reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+        });
+        return;
+    }
+
+    if (text === "🧔‍♂️ حاجی بخشید" && await isAdminOrOwner(userId)) {
+        db.actions[userId] = "unban_target";
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "🆔 آیدی عددی کاربری که می‌خواهید آنبن کنید را بفرستید:",
+            reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+        });
+        return;
+    }
+
+    if (text === "👑 معاون حاجی" && isOwner(userId)) {
+        db.actions[userId] = "add_admin";
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "🆔 آیدی عددی فرد مورد نظر برای انتصاب به عنوان معاون را بفرستید:",
+            reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+        });
+        return;
+    }
+
+    if (text === "❌ حذف معاون حاجی" && isOwner(userId)) {
+        db.actions[userId] = "remove_admin";
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "🆔 آیدی عددی مدیری که می‌خواهید حذف کنید را بفرستید:",
+            reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+        });
+        return;
+    }
+
+    let action = db.actions[userId];
+    if (action) {
+        if (action === "broadcast") {
+            const broadcastMsg = `🚨 خبر از دفتر حاج گاسم:\n📩 پیام مدیریت:\n${text}\n\nحاجی گفت اینو بهتون بگیم 😎`;
+            for (let uId of db.all_users) {
+                let userKeyboard = [
+                    [{ text: "😎 گاسم، پروکسی بده" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
+                    [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }]
+                ];
+                if (await isAdminOrOwner(uId)) {
+                    userKeyboard.push([{ text: "👑 فرماندهی حاجی" }]);
+                }
+                await sendTelegram("sendMessage", {
+                    chat_id: uId,
+                    text: broadcastMsg,
+                    reply_markup: { keyboard: userKeyboard, resize_keyboard: true }
+                });
+            }
+            delete db.actions[userId];
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: "✅ اعلامیه با موفقیت به همه ارسال شد!",
+                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+            });
+            return;
+        }
+
+        if (action === "add_proxy") {
+            const proxyLink = text.trim();
+            const numbersMap = ["اولین", "دومین", "سومین", "چهارمین", "پنجمین", "ششمین", "هفتمین", "هشتمین", "نهمین", "دهمین"];
+            let proxyName = numbersMap[db.proxies.length] ? `${numbersMap[db.proxies.length]} پروکسی` : `پروکسی شماره ${db.proxies.length + 1}`;
+
+            db.proxies.push({ name: proxyName, link: proxyLink });
+            delete db.actions[userId];
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: `✅ پروکسی با عنوان "${proxyName}" در انبار حاجی ثبت شد!`,
+                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+            });
+            return;
+        }
+
+        if (action === "fetch_channel") {
+            delete db.actions[userId];
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: `✅ عملیات بررسی کانال انجام شد.`,
+                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+            });
+            return;
+        }
+
+        if (action === "ban_target") {
+            const targetId = text.trim();
+            db.actions[`temp_ban_${userId}`] = targetId;
+            db.actions[userId] = "ban_reason";
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "✍️ دلیل بن شدن کاربر را وارد کنید:" });
+            return;
+        }
+
+        if (action === "ban_reason") {
+            const targetId = db.actions[`temp_ban_${userId}`];
+            const reason = text.trim();
+            if (db.users[targetId]) {
+                db.users[targetId].is_banned = true;
+                db.users[targetId].ban_reason = reason;
+                await sendTelegram("sendMessage", {
+                    chat_id: targetId,
+                    text: `🚫 حاج گاسم تصمیم گرفت! 🧔‍♂️\nسلام رفیق 👋\nدسترسی شما به ربات بسته شد ⛔\n📌 دلیل بن شدن:\n${reason}\n📡 فعلاً پروکسی گرفتن از حاجی برای شما متوقف شده 😂\n👑 مدیریت حاج گاسم`
+                });
+            }
+            delete db.actions[userId];
+            delete db.actions[`temp_ban_${userId}`];
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: "✅ کاربر با موفقیت بن شد.",
+                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+            });
+            return;
+        }
+
+        if (action === "unban_target") {
+            const targetId = text.trim();
+            if (db.users[targetId]) {
+                db.users[targetId].is_banned = false;
+                db.users[targetId].ban_reason = "";
+                await sendTelegram("sendMessage", {
+                    chat_id: targetId,
+                    text: `🔓 حاج گاسم بخشید! 🧔‍♂️\nسلام رفیق 👋😎\nدسترسی شما دوباره فعال شد ✅\n👑 مدیریت حاج گاسم`
+                });
+            }
+            delete db.actions[userId];
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: "✅ کاربر آنبن شد.",
+                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+            });
+            return;
+        }
+
+        if (action === "add_admin") {
+            const newAdminId = text.trim();
+            db.admins[newAdminId] = true;
+            delete db.actions[userId];
+            await sendTelegram("sendMessage", { chat_id: newAdminId, text: "🎉 شما مدیر شدید! یک بار روی دکمه آپدیت حاج گاسم بزن تا دکمه مدیریت بیاد." });
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: "✅ معاون جدید اضافه شد.",
+                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+            });
+            return;
+        }
+
+        if (action === "remove_admin") {
+            const remAdminId = text.trim();
+            delete db.admins[remAdminId];
+            delete db.actions[userId];
+            await sendTelegram("sendMessage", { chat_id: remAdminId, text: "⚠️ شما توسط حاجی از مدیریت حذف شدید." });
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: "✅ مدیر حذف شد.",
+                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+            });
+            return;
+        }
+
+        if (action === "support_text") {
+            delete db.actions[userId];
+            const supMsg = `🛠 پیام پشتیبانی جدید:\n👤 از طرف: <code>${userId}</code>\n💬 پیام:\n${text}`;
+            await sendTelegram("sendMessage", {
+                chat_id: OWNER_ID,
+                text: supMsg,
+                parse_mode: "HTML",
+                reply_markup: { inline_keyboard: [[{ text: "💬 جواب دادن", callback_data: `reply_sup_${userId}` }]] }
+            });
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: "✅ پیام شما به پشتیبانی ارسال شد.",
+                reply_markup: {
+                    keyboard: [
+                        [{ text: "😎 گاسم، پروکسی بده" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
+                        [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
+                        [await isAdminOrOwner(userId) ? { text: "👑 فرماندهی حاجی" } : null].filter(Boolean)
+                    ],
+                    resize_keyboard: true
+                }
+            });
+            return;
+        }
+    }
+
+    let replyTarget = db.support_targets[userId];
+    if (replyTarget) {
+        delete db.support_targets[userId];
+        await sendTelegram("sendMessage", {
+            chat_id: replyTarget,
+            text: `📩 پیام از دفتر حاجی 🧔‍♂️\n\n${text}`,
+            reply_markup: { inline_keyboard: [[{ text: "💬 جواب دادن", callback_data: `reply_sup_${userId}` }]] }
+        });
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "✅ پاسخ برای کاربر ارسال شد.",
+            reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+        });
+        return;
+    }
+}
+
+async function handleCallbackQuery(cq) {
+    const data = cq.data;
+    const userId = cq.from.id;
+    const chatId = cq.message.chat.id;
+    const messageId = cq.message.message_id;
+
+    if (data.startsWith("del_proxy_")) {
+        const index = parseInt(data.replace("del_proxy_", ""));
+        if (db.proxies[index]) {
+            db.proxies.splice(index, 1);
+        }
+        await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "پروکسی حذف شد!" });
+        await sendTelegram("editMessageText", {
+            chat_id: chatId,
+            message_id: messageId,
+            text: "✅ پروکسی مورد نظر با موفقیت حذف شد."
+        });
+        return;
+    }
+
+    if (data.startsWith("reply_sup_")) {
+        const targetUserId = data.replace("reply_sup_", "");
+        db.support_targets[userId] = targetUserId;
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: `✍️ پاسخ خود را برای کاربر وارد کنید:`,
+            reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+        });
+        return;
+    }
+}
+
+// راه‌اندازی سرور وب برای Railway
+const server = http.createServer((req, res) => {
+    if (req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk.toString(); });
+        req.on('end', async () => {
+            try {
+                const update = JSON.parse(body);
+                await handleUpdate(update);
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ status: 'ok' }));
+            } catch (err) {
+                console.error(err);
+                res.writeHead(500, { 'Content-Type': 'text/plain' });
+                res.end('Internal Server Error');
+            }
+        });
+    } else {
+        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.end('Haj Gasem Bot is running on Railway! 😎');
+    }
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => {
+    console.log(`Server is running on port ${PORT}`);
+});
