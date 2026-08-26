@@ -23,7 +23,8 @@ let db = {
     actions: {},
     daily_req: {},
     support_targets: {},
-    spam_control: {}
+    spam_control: {},
+    voted_proxies: {} // ذخیره اینکه چه کاربری به چه پروکسی ای رای داده
 };
 
 function loadDatabase() {
@@ -31,6 +32,7 @@ function loadDatabase() {
         if (fs.existsSync(DB_FILE)) {
             const data = fs.readFileSync(DB_FILE, 'utf8');
             db = JSON.parse(data);
+            if (!db.voted_proxies) db.voted_proxies = {};
             console.log("Database loaded successfully.");
         }
     } catch (err) {
@@ -317,7 +319,6 @@ async function handleMessage(msg) {
         db.proxies.forEach((p, index) => {
             let starsCount = p.stars || 0;
             let row = [{ text: `🔗 ${p.name} (⭐ ${starsCount})`, url: p.link }];
-            // اگر مالک است دکمه ثبت امتیاز دلخواه، وگرنه دکمه امتیاز دهی تکی عادی
             if (isOwner(userId)) {
                 row.push({ text: `⭐ ثبت امتیاز`, callback_data: `admin_star_${index}` });
             } else {
@@ -862,11 +863,32 @@ async function handleCallbackQuery(cq) {
 
     if (data.startsWith("star_proxy_")) {
         const index = parseInt(data.replace("star_proxy_", ""));
+        
+        if (!db.voted_proxies) db.voted_proxies = {};
+        if (!db.voted_proxies[userId]) db.voted_proxies[userId] = {};
+
+        // بررسی اینکه آیا کاربر قبلاً به این پروکسی رای داده است یا خیر
+        if (db.voted_proxies[userId][index]) {
+            await sendTelegram("answerCallbackQuery", { 
+                callback_query_id: cq.id, 
+                text: "⚠️ رفیق، شما قبلاً به این پروکسی رای دادید و فقط یه بار می‌تونید ستاره بدید!", 
+                show_alert: true 
+            });
+            return;
+        }
+
         if (db.proxies && db.proxies[index]) {
             if (!db.proxies[index].stars) db.proxies[index].stars = 0;
             db.proxies[index].stars += 1;
+            
+            // ثبت رای کاربر برای این پروکسی خاص
+            db.voted_proxies[userId][index] = true;
             saveDatabase();
-            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "⭐ دمت گرم! یک ستاره به این پروکسی اضافه شد." });
+
+            await sendTelegram("answerCallbackQuery", { 
+                callback_query_id: cq.id, 
+                text: "⭐ دمت گرم! یک ستاره به این پروکسی اضافه شد." 
+            });
         } else {
             await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "⚠️ این پروکسی دیگر موجود نیست." });
         }
