@@ -346,9 +346,9 @@ async function handleMessage(msg) {
         db.proxies.forEach((p, index) => {
             let starsCount = p.stars || 0;
             let row = [
-                { text: `🔗 ${p.name} (⭐ ${starsCount})`, url: p.link },
-                { text: "⭐ پسندیدم", callback_data: `star_proxy_${index}` },
-                { text: "🚨 گزارش قطعی", callback_data: `report_proxy_${index}` }
+                { text: `🔗 ${p.name}`, url: p.link },
+                { text: `⭐ ${starsCount}`, callback_data: `star_proxy_${index}` },
+                { text: "🚨 گزارش", callback_data: `report_proxy_${index}` }
             ];
             inlineKeyboard.push(row);
         });
@@ -373,10 +373,11 @@ async function handleMessage(msg) {
         for (let i = 0; i < db.proxies.length; i++) {
             let p = db.proxies[i];
             let pingResult = await pingProxy(p.link);
+            let starsCount = p.stars || 0;
             let row = [
                 { text: `🔗 ${p.name} [${pingResult}]`, url: p.link },
-                { text: `⭐ (${p.stars || 0})`, callback_data: `star_proxy_${i}` },
-                { text: "🚨 گزارش قطعی", callback_data: `report_proxy_${i}` }
+                { text: `⭐ ${starsCount}`, callback_data: `star_proxy_${i}` },
+                { text: "🚨 گزارش", callback_data: `report_proxy_${i}` }
             ];
             inlineKeyboard.push(row);
         }
@@ -401,18 +402,19 @@ async function handleMessage(msg) {
 
         const randomIndex = Math.floor(Math.random() * db.proxies.length);
         const randomProxy = db.proxies[randomIndex];
+        const starsCount = randomProxy.stars || 0;
 
         let inlineKeyboard = [
             [{ text: "⚡️ بزن برای اتصال فوری به پروکسی", url: randomProxy.link }],
             [
-                { text: "⭐ پسندیدم", callback_data: `star_proxy_${randomIndex}` },
+                { text: `⭐ پسندیدم (${starsCount})`, callback_data: `star_proxy_${randomIndex}` },
                 { text: "🚨 گزارش قطعی", callback_data: `report_proxy_${randomIndex}` }
             ]
         ];
 
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: `🎲 شانس امروزت این دراومد رفیق!\n📦 نام: ${randomProxy.name}\n⭐ محبوبیت: ${randomProxy.stars || 0}\n\nروی دکمه زیر بزن تا مستقیم متصل بشی:`,
+            text: `🎲 شانس امروزت این دراومد رفیق!\n📦 نام: ${randomProxy.name}\n⭐ محبوبیت: ${starsCount}\n\nروی دکمه زیر بزن تا مستقیم متصل بشی:`,
             reply_markup: { inline_keyboard: inlineKeyboard }
         });
         return;
