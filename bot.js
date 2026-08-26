@@ -6,7 +6,7 @@ const path = require('path');
 const BOT_TOKEN = "8751373370:AAFDeoi7OIeelK53RJYrh9xgsvY0HVy8oGI";
 const OWNER_ID = 8854073031;
 const CHANNEL_USERNAME = "@Hajghasem12"; 
-const BOT_USERNAME = "HajGhasemRobot"; // آیدی ربات خودت رو بدون @ اینجا بنویس (برای ساخت لینک دعوت)
+const BOT_USERNAME = "HajGhasemRobot"; // آیدی ربات خودت رو بدون @ اینجا دقیق بنویس
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'data');
@@ -256,7 +256,7 @@ async function handleMessage(msg) {
         }
         saveDatabase();
 
-        // بررسی پارامتر ریفرال در دستور /start (مثال: /start ref_123456)
+        // بررسی پارامتر ریفرال فقط برای کاربران کاملاً جدید
         if (text.startsWith("/start ref_")) {
             const inviterId = text.replace("/start ref_", "").trim();
             if (inviterId && inviterId !== String(userId) && db.users[inviterId]) {
@@ -269,7 +269,7 @@ async function handleMessage(msg) {
                     // اطلاع‌رسانی به دعوت‌کننده
                     await sendTelegram("sendMessage", {
                         chat_id: inviterId,
-                        text: `🎉 رفیق یک نفر با لینک دعوت شما وارد ربات شد!\n👤 نام: ${fullName}`
+                        text: `🎉 رفیق یک نفر برای اولین بار با لینک دعوت شما وارد ربات شد!\n👤 نام: ${fullName}`
                     });
                 }
             }
@@ -308,7 +308,7 @@ async function handleMessage(msg) {
 
     if (!db.actions) db.actions = {};
 
-    if (text === "🔙 بازگشت" || text === "/start") {
+    if (text === "🔙 بازگشت" || text.startsWith("/start")) {
         delete db.actions[userId];
         saveDatabase();
         let keyboard = [
@@ -884,14 +884,14 @@ async function handleCallbackQuery(cq) {
         
         let listText = `🔗 لینک دعوت اختصاصی شما:\n<code>${inviteLink}</code>\n\n👥 تعداد افرادی که دعوت کردید: <b>${myReferrals.length}</b> نفر\n\n`;
         if (myReferrals.length > 0) {
-            listText += "📋 لیست افرادی که دعوت کردید:\n";
+            listText += "📋 لیست افرادی که دعوت کردید (فقط کاربران جدید):\n";
             myReferrals.forEach((refId, idx) => {
                 let refUser = db.users[refId];
                 let refName = refUser ? refUser.full_name : "ناشناس";
                 listText += `${idx + 1}. ${refName} (🆔 <code>${refId}</code>)\n`;
             });
         } else {
-            listText += "⚠️ هنوز کسی رو دعوت نکردی رفیق! لینک بالا رو بفرست واسه دوستات.";
+            listText += "⚠️ هنوز کسی رو با لینک اختصاصی خودت دعوت نکردی رفیق!";
         }
 
         await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id });
@@ -907,7 +907,6 @@ async function handleCallbackQuery(cq) {
         const myReferrals = db.referrals && db.referrals[userId] ? db.referrals[userId] : [];
         const invitedCount = myReferrals.length;
 
-        // شرط: اول باید حداقل ۵ نفر رو دعوت کرده باشه
         if (invitedCount < 5 && !await isAdminOrOwner(userId)) {
             await sendTelegram("answerCallbackQuery", { 
                 callback_query_id: cq.id, 
@@ -917,7 +916,6 @@ async function handleCallbackQuery(cq) {
             return;
         }
 
-        // ساخت لیدربورد بر اساس بیشترین دعوت‌ها
         let refStats = [];
         if (db.referrals) {
             for (let inviterId in db.referrals) {
@@ -928,7 +926,7 @@ async function handleCallbackQuery(cq) {
             }
         }
         refStats.sort((a, b) => b.count - a.count);
-        let topList = refStats.slice(0, 10); // ۱۰ نفر برتر
+        let topList = refStats.slice(0, 10);
 
         let lbText = `🏆 <b>لیدربورد حامیان حاج گاسم (برترین دعوت‌کنندگان)</b>\n\n`;
         if (topList.length === 0) {
@@ -936,7 +934,7 @@ async function handleCallbackQuery(cq) {
         } else {
             topList.forEach((item, index) => {
                 let uData = db.users[item.inviterId];
-                let name = uData ? uData.full_name : "کاربر ناشنااس";
+                let name = uData ? uData.full_name : "کاربر ناشناس";
                 let medal = index === 0 ? "🥇" : index === 1 ? "🥈" : index === 2 ? "🥉" : "🔹";
                 lbText += `${medal} ${name} — <b>${item.count}</b> دعوت\n`;
             });
