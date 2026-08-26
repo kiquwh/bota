@@ -1,0 +1,12 @@
+{
+  "name": "haj-gasem-bot",
+  "version": "1.0.0",
+  "description": "Telegram Proxy Bot for Haj Gasem",
+  "main": "bot.js",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
