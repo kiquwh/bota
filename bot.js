@@ -1,10 +1,22 @@
 const fetch = require('node-fetch');
 const http = require('http');
+const fs = require('fs');
+const path = require('path');
 
 const BOT_TOKEN = "8751373370:AAFDeoi7OIeelK53RJYrh9xgsvY0HVy8oGI";
 const OWNER_ID = 8854073031;
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
+// مسیر ذخیره اطلاعات در Volume ریلیوی
+const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'data');
+const DB_FILE = path.join(DATA_DIR, 'db.json');
+
+// مطمئن شویم پوشه وجود دارد
+if (!fs.existsSync(DATA_DIR)) {
+    fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+// لود کردن دیتابیس از فایل
 let db = {
     users: {},
     all_users: [],
@@ -14,6 +26,29 @@ let db = {
     daily_req: {},
     support_targets: {}
 };
+
+function loadDatabase() {
+    try {
+        if (fs.existsSync(DB_FILE)) {
+            const data = fs.readFileSync(DB_FILE, 'utf8');
+            db = JSON.parse(data);
+            console.log("Database loaded successfully.");
+        }
+    } catch (err) {
+        console.error("Error loading database:", err);
+    }
+}
+
+// ذخیره کردن دیتابیس در فایل
+function saveDatabase() {
+    try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(db, null, 2), 'utf8');
+    } catch (err) {
+        console.error("Error saving database:", err);
+    }
+}
+
+loadDatabase();
 
 async function sendTelegram(method, body) {
     try {
@@ -74,6 +109,7 @@ async function handleMessage(msg) {
         if (!db.all_users.includes(userId)) {
             db.all_users.push(userId);
         }
+        saveDatabase();
 
         const notifyText = `🚨 کاربر جدید ربات رو استارت کرد!\n👤 نام: ${fullName}\n🔗 آیدی: ${username}\n🆔 آیدی عددی: <code>${userId}</code>`;
         await sendTelegram("sendMessage", { chat_id: OWNER_ID, text: notifyText, parse_mode: "HTML" });
@@ -91,6 +127,7 @@ async function handleMessage(msg) {
 
     if (text === "🔙 بازگشت" || text === "/start") {
         delete db.actions[userId];
+        saveDatabase();
         let keyboard = [
             [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
             [{ text: "🔁 آپدیت کن حاج گاسمو" }, { text: "🛠 پشتیبانی حاجی" }],
@@ -138,14 +175,12 @@ async function handleMessage(msg) {
         return;
     }
 
-    // قابلیت جذاب اتصال شانسی (تک‌کلیکی)
     if (text === "⚡️ اتصال شانسی (تک‌کلیکی)") {
         if (db.proxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ انبار حاجی خالیه رفیق! فعلاً پروکسی وجود نداره." });
             return;
         }
 
-        // انتخاب تصادفی یک پروکسی از لیست
         const randomIndex = Math.floor(Math.random() * db.proxies.length);
         const randomProxy = db.proxies[randomIndex];
 
@@ -174,6 +209,7 @@ async function handleMessage(msg) {
 
     if (text === "🛠 پشتیبانی حاجی") {
         db.actions[userId] = "support_text";
+        saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "✍️ لطفاً پیام خود را برای پشتیبانی ارسال کنید:",
@@ -192,6 +228,7 @@ async function handleMessage(msg) {
         }
 
         db.daily_req[reqKey] = true;
+        saveDatabase();
         const reqMsg = `📦 کاربر درخواست پروکسی دارد!\n👤 نام: ${fullName}\n🆔 آیدی عددی: <code>${userId}</code>`;
         await sendTelegram("sendMessage", { chat_id: OWNER_ID, text: reqMsg, parse_mode: "HTML" });
         await sendTelegram("sendMessage", { chat_id: chatId, text: "✅ درخواست شما برای مدیریت ارسال شد. حاجی به‌زودی انبار رو شارژ می‌کنه! 😎" });
@@ -261,6 +298,7 @@ async function handleMessage(msg) {
 
     if (text === "🚨 اعلامیه حاجی" && await isAdminOrOwner(userId)) {
         db.actions[userId] = "broadcast";
+        saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "✍️ لطفاً متن اعلامیه خود را ارسال کنید:",
@@ -271,6 +309,7 @@ async function handleMessage(msg) {
 
     if (text === "🛠 اضافه کردن سوغات حاجی" && await isAdminOrOwner(userId)) {
         db.actions[userId] = "add_proxy";
+        saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "🔗 لطفاً فقط لینک پروکسی را ارسال کنید:",
@@ -281,6 +320,7 @@ async function handleMessage(msg) {
 
     if (text === "📥 مکش پروکسی از کانال" && await isAdminOrOwner(userId)) {
         db.actions[userId] = "fetch_channel";
+        saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "📡 آیدی یا لینک کانال مورد نظر را بفرستید (مثال: @ProxyChannel):",
@@ -308,6 +348,7 @@ async function handleMessage(msg) {
 
     if (text === "🚫 اخراج از جمع حاجی" && await isAdminOrOwner(userId)) {
         db.actions[userId] = "ban_target";
+        saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "🆔 آیدی عددی کاربری که می‌خواهید بن کنید را بفرستید:",
@@ -318,6 +359,7 @@ async function handleMessage(msg) {
 
     if (text === "🧔‍♂️ حاجی بخشید" && await isAdminOrOwner(userId)) {
         db.actions[userId] = "unban_target";
+        saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "🆔 آیدی عددی کاربری که می‌خواهید آنبن کنید را بفرستید:",
@@ -328,6 +370,7 @@ async function handleMessage(msg) {
 
     if (text === "👑 معاون حاجی" && isOwner(userId)) {
         db.actions[userId] = "add_admin";
+        saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "🆔 آیدی عددی فرد مورد نظر برای انتصاب به عنوان معاون را بفرستید:",
@@ -338,6 +381,7 @@ async function handleMessage(msg) {
 
     if (text === "❌ حذف معاون حاجی" && isOwner(userId)) {
         db.actions[userId] = "remove_admin";
+        saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "🆔 آیدی عددی مدیری که می‌خواهید حذف کنید را بفرستید:",
@@ -366,6 +410,7 @@ async function handleMessage(msg) {
                 });
             }
             delete db.actions[userId];
+            saveDatabase();
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: "✅ اعلامیه با موفقیت به همه ارسال شد!",
@@ -381,6 +426,7 @@ async function handleMessage(msg) {
 
             db.proxies.push({ name: proxyName, link: proxyLink });
             delete db.actions[userId];
+            saveDatabase();
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: `✅ پروکسی با عنوان "${proxyName}" در انبار حاجی ثبت شد!`,
@@ -391,6 +437,7 @@ async function handleMessage(msg) {
 
         if (action === "fetch_channel") {
             delete db.actions[userId];
+            saveDatabase();
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: `✅ عملیات بررسی کانال انجام شد.`,
@@ -403,6 +450,7 @@ async function handleMessage(msg) {
             const targetId = text.trim();
             db.actions[`temp_ban_${userId}`] = targetId;
             db.actions[userId] = "ban_reason";
+            saveDatabase();
             await sendTelegram("sendMessage", { chat_id: chatId, text: "✍️ دلیل بن شدن کاربر را وارد کنید:" });
             return;
         }
@@ -420,6 +468,7 @@ async function handleMessage(msg) {
             }
             delete db.actions[userId];
             delete db.actions[`temp_ban_${userId}`];
+            saveDatabase();
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: "✅ کاربر با موفقیت بن شد.",
@@ -439,6 +488,7 @@ async function handleMessage(msg) {
                 });
             }
             delete db.actions[userId];
+            saveDatabase();
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: "✅ کاربر آنبن شد.",
@@ -451,6 +501,7 @@ async function handleMessage(msg) {
             const newAdminId = text.trim();
             db.admins[newAdminId] = true;
             delete db.actions[userId];
+            saveDatabase();
             await sendTelegram("sendMessage", { chat_id: newAdminId, text: "🎉 شما مدیر شدید! یک بار روی دکمه آپدیت حاج گاسم بزن تا دکمه مدیریت بیاد." });
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
@@ -464,6 +515,7 @@ async function handleMessage(msg) {
             const remAdminId = text.trim();
             delete db.admins[remAdminId];
             delete db.actions[userId];
+            saveDatabase();
             await sendTelegram("sendMessage", { chat_id: remAdminId, text: "⚠️ شما توسط حاجی از مدیریت حذف شدید." });
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
@@ -475,6 +527,7 @@ async function handleMessage(msg) {
 
         if (action === "support_text") {
             delete db.actions[userId];
+            saveDatabase();
             const supMsg = `🛠 پیام پشتیبانی جدید:\n👤 از طرف: <code>${userId}</code>\n💬 پیام:\n${text}`;
             await sendTelegram("sendMessage", {
                 chat_id: OWNER_ID,
@@ -502,6 +555,7 @@ async function handleMessage(msg) {
     let replyTarget = db.support_targets[userId];
     if (replyTarget) {
         delete db.support_targets[userId];
+        saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: replyTarget,
             text: `📩 پیام از دفتر حاجی 🧔‍♂️\n\n${text}`,
@@ -526,6 +580,7 @@ async function handleCallbackQuery(cq) {
         const index = parseInt(data.replace("del_proxy_", ""));
         if (db.proxies[index]) {
             db.proxies.splice(index, 1);
+            saveDatabase();
         }
         await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "پروکسی حذف شد!" });
         await sendTelegram("editMessageText", {
@@ -539,6 +594,7 @@ async function handleCallbackQuery(cq) {
     if (data.startsWith("reply_sup_")) {
         const targetUserId = data.replace("reply_sup_", "");
         db.support_targets[userId] = targetUserId;
+        saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: `✍️ پاسخ خود را برای کاربر وارد کنید:`,
@@ -566,7 +622,7 @@ const server = http.createServer((req, res) => {
         });
     } else {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('Haj Gasem Bot is running on Railway! 😎');
+        res.end('Haj Gasem Bot is running with persistent storage on Railway! 😎');
     }
 });
 
