@@ -29,7 +29,7 @@ let db = {
     support_targets_list: {},
     bot_settings: {
         is_maintenance: false,
-        maintenance_reason: "بروزرسانی سیستم و انبار حاجی"
+        maintenance_reason: "بروزرسانی سیستم و انبار"
     }
 };
 
@@ -40,7 +40,7 @@ function loadDatabase() {
             db = JSON.parse(data);
             if (!db.voted_proxies) db.voted_proxies = {};
             if (!db.bot_settings) {
-                db.bot_settings = { is_maintenance: false, maintenance_reason: "بروزرسانی سیستم و انبار حاجی" };
+                db.bot_settings = { is_maintenance: false, maintenance_reason: "بروزرسانی سیستم و انبار" };
             }
             console.log("Database loaded successfully.");
         }
@@ -213,7 +213,7 @@ async function handleMessage(msg) {
                 await sendTelegram("sendMessage", {
                     chat_id: chatId,
                     reply_to_message_id: msg.message_id,
-                    text: "🧔‍♂️ فعلاً انبار حاج گاسم خالیه رفیق!"
+                    text: "🧔‍♂️ فعلاً انبار خالیه رفیق!"
                 });
                 return;
             }
@@ -224,7 +224,7 @@ async function handleMessage(msg) {
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 reply_to_message_id: msg.message_id,
-                text: "⚡️ چند نمونه از پروکسی‌های انبار حاج گاسم:",
+                text: "⚡️ چند نمونه از پروکسی‌های انبار:",
                 reply_markup: { inline_keyboard: inlineKeyboard }
             });
         }
@@ -238,7 +238,7 @@ async function handleMessage(msg) {
             const reason = db.bot_settings.maintenance_reason || "در حال بروزرسانی سیستم";
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
-                text: `🚧 حاج گاسم فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nحاجی در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ Gasem ProMax 📡\n\n🔗 آیدی بات: ${BOT_USERNAME}`
+                text: `🚧 ربات فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nربات در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ Gasem ProMax 📡\n\n🔗 آیدی بات: ${BOT_USERNAME}`
             });
             return;
         }
@@ -283,7 +283,7 @@ async function handleMessage(msg) {
     if (userData.is_banned && !userIsAdmin) {
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: `🚫 حاج گاسم تصمیم گرفت! 🧔‍♂️\nسلام رفیق 👋\nدسترسی شما به ربات بسته شد ⛔\n📌 دلیل بن شدن:\n${userData.ban_reason || 'نامشخص'}\n📡 فعلاً پروکسی گرفتن از حاجی برای شما متوقف شده 😂\n👑 مدیریت حاج گاسم`
+            text: `🚫 مدیریت تصمیم گرفت! 🧔‍♂️\nسلام رفیق 👋\nدسترسی شما به ربات بسته شد ⛔\n📌 دلیل بن شدن:\n${userData.ban_reason || 'نامشخص'}\n📡 فعلاً پروکسی گرفتن برای شما متوقف شده 😂\n👑 مدیریت ربات`
         });
         return;
     }
@@ -293,10 +293,10 @@ async function handleMessage(msg) {
         if (!isMember) {
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
-                text: `⚠️ رفیق عزیز برای استفاده از ربات حاج گاسم، اول باید توی کانال زیر عضو بشی:\n\n🔗 ${CHANNEL_USERNAME}\n\n👇 بعد از عضویت، روی دکمه‌ی زیر بزن تا رباتت فعال بشه:`,
+                text: `⚠️ رفیق عزیز برای استفاده از ربات، اول باید توی کانال زیر عضو بشی:\n\n🔗 ${CHANNEL_USERNAME}\n\n👇 بعد از عضویت، روی دکمه‌ی زیر بزن تا رباتت فعال بشه:`,
                 reply_markup: {
                     inline_keyboard: [
-                        [{ text: "📢 ورود به کانال حاجی", url: `https://t.me/Hajghasem12` }],
+                        [{ text: "📢 ورود به کانال", url: `https://t.me/Hajghasem12` }],
                         [{ text: "✅ عضو شدم، بررسی کن", callback_data: "check_join" }]
                     ]
                 }
@@ -318,27 +318,27 @@ async function handleMessage(msg) {
         delete db.actions[userId];
         saveDatabase();
         let keyboard = [
-            [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-            [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-            [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-            [{ text: "🤝 حمایت از حاجی" }]
+            [{ text: "دریافت پروکسی" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+            [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "آپدیت کن رباتو" }],
+            [{ text: "پشتیبانی ربات" }, { text: "پروکسی شارژ کن" }],
+            [{ text: "حمایت از ربات" }]
         ];
 
         if (await isAdminOrOwner(userId)) {
-            keyboard.push([{ text: "👑 فرماندهی حاجی" }]);
+            keyboard.push([{ text: "پنل مدیریت" }]);
         }
 
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: `🧔‍♂️ سلام رفیق، خوش اومدی به حاج گاسم 😎\n📡 اینجا پاتوق پروکسی‌های رایگان و آماده‌ی حرکته!\nحاج گاسم هر روز می‌گرده، پروکسی‌های بهتر رو پیدا می‌کنه و میاره برات 🚀`,
+            text: `🧔‍♂️ سلام رفیق، خوش اومدی به ربات 😎\n📡 اینجا پاتوق پروکسی‌های رایگان و آماده‌ی حرکته!\nربات هر روز می‌گرده، پروکسی‌های بهتر رو پیدا می‌کنه و میاره برات 🚀`,
             reply_markup: { keyboard: keyboard, resize_keyboard: true }
         });
         return;
     }
 
-    if (text === "😎 گاسم، پروکسی بده") {
+    if (text === "دریافت پروکسی") {
         if (!db.proxies || db.proxies.length === 0) {
-            await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ فعلاً انبار حاجی خالیه رفیق! به‌زودی پروکسی میذاریم." });
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ فعلاً انبار خالیه رفیق! به‌زودی پروکسی میذاریم." });
             return;
         }
 
@@ -355,7 +355,7 @@ async function handleMessage(msg) {
 
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: "⚡️ لیست پروکسی‌های انبار حاجی:",
+            text: "⚡️ لیست پروکسی‌های انبار:",
             reply_markup: { inline_keyboard: inlineKeyboard }
         });
         return;
@@ -388,7 +388,7 @@ async function handleMessage(msg) {
 
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: "📊 نتیجه تست پینگ واقعی انبار حاجی:",
+            text: "📊 نتیجه تست پینگ واقعی انبار:",
             reply_markup: { inline_keyboard: inlineKeyboard }
         });
         return;
@@ -396,7 +396,7 @@ async function handleMessage(msg) {
 
     if (text === "⚡️ اتصال شانسی (تک‌کلیکی)") {
         if (!db.proxies || db.proxies.length === 0) {
-            await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ انبار حاجی خالیه رفیق! فعلاً پروکسی وجود نداره." });
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ انبار خالیه رفیق! فعلاً پروکسی وجود نداره." });
             return;
         }
 
@@ -420,10 +420,10 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "🔁 آپدیت کن حاج گاسمو") {
+    if (text === "آپدیت کن رباتو") {
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: "✅ حاج گاسم آپدیت شد!",
+            text: "✅ ربات آپدیت شد!",
             reply_markup: { remove_keyboard: true }
         });
         msg.text = "/start";
@@ -431,7 +431,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "🛠 پشتیبانی حاجی") {
+    if (text === "پشتیبانی ربات") {
         db.actions[userId] = "support_text";
         saveDatabase();
         await sendTelegram("sendMessage", {
@@ -442,7 +442,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "📦 حاجی شارژ کن") {
+    if (text === "پروکسی شارژ کن") {
         const today = new Date().toISOString().split('T')[0];
         if (!db.daily_req) db.daily_req = {};
         const reqKey = `${userId}:${today}`;
@@ -456,29 +456,29 @@ async function handleMessage(msg) {
         saveDatabase();
         const reqMsg = `📦 کاربر درخواست پروکسی دارد!\n👤 نام: ${fullName}\n🆔 آیدی عددی: <code>${userId}</code>`;
         await sendTelegram("sendMessage", { chat_id: OWNER_ID, text: reqMsg, parse_mode: "HTML" });
-        await sendTelegram("sendMessage", { chat_id: chatId, text: "✅ درخواست شما برای مدیریت ارسال شد. حاجی به‌زودی انبار رو شارژ می‌کنه! 😎" });
+        await sendTelegram("sendMessage", { chat_id: chatId, text: "✅ درخواست شما برای مدیریت ارسال شد. انبار به‌زودی شارژ می‌کنه! 😎" });
         return;
     }
 
-    if (text === "🤝 حمایت از حاجی") {
+    if (text === "حمایت از ربات") {
         const botUsernameClean = BOT_USERNAME.replace("@", "");
         const refLink = `https://t.me/${botUsernameClean}?start=ref_${userId}`;
         if (!db.users[userId].referrals) db.users[userId].referrals = 0;
         
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: `🤝 **بخش حمایت از حاج گاسم** 🧔‍♂️\n\nبا اشتراک‌گذاری لینک زیر با دوستانت، می‌تونی به حاجی کمک کنی لشکر رو بزرگ‌تر کنیم و حمایت ویژه‌ای از ربات داشته باشی:\n\n🔗 لینک اختصاصی شما:\n<code>${refLink}</code>\n\n👥 تعداد دعوت‌شده‌ها: ${db.users[userId].referrals} نفر\n\nدکمه‌ی زیر رو بزن تا لینک رو سریع برای دوستانت بفرستی:`,
+            text: `🤝 **بخش حمایت از ربات** 🧔‍♂️\n\nبا اشتراک‌گذاری لینک زیر با دوستانت، می‌تونی کمک کنی لشکر رو بزرگ‌تر کنیم و حمایت ویژه‌ای از ربات داشته باشی:\n\n🔗 لینک اختصاصی شما:\n<code>${refLink}</code>\n\n👥 تعداد دعوت‌شده‌ها: ${db.users[userId].referrals} نفر\n\nدکمه‌ی زیر رو بزن تا لینک رو سریع برای دوستانت بفرستی:`,
             parse_mode: "HTML",
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: "📤 اشتراک‌گذاری لینک در تلگرام", url: `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent("دریفت پروکسی‌های رایگان و پرسرعت با ربات حاج گاسم 😎👇")}` }]
+                    [{ text: "📤 اشتراک‌گذاری لینک در تلگرام", url: `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent("دریفت پروکسی‌های رایگان و پرسرعت با ربات 😎👇")}` }]
                 ]
             }
         });
         return;
     }
 
-    if (text === "👑 فرماندهی حاجی") {
+    if (text === "پنل مدیریت") {
         if (!await isAdminOrOwner(userId)) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "❌ شما دسترسی به این بخش ندارید!" });
             return;
@@ -488,21 +488,21 @@ async function handleMessage(msg) {
         let maintToggleText = isMaint ? "🟢 روشن کردن ربات" : "🔴 خاموش کردن ربات";
 
         let adminKeyboard = [
-            [{ text: "🚨 اعلامیه حاجی" }, { text: "🛠 اضافه کردن سوغات حاجی" }],
-            [{ text: "📥 مکش پروکسی از کانال" }, { text: "❌ فرستادن پروکسی به بازنشستگی" }],
-            [{ text: "👥 لشکر حاجی" }, { text: "🚫 اخراج از جمع حاجی" }],
-            [{ text: "🧔‍♂️ حاجی بخشید" }, { text: maintToggleText }]
+            [{ text: "اعلامیه" }, { text: "اضافه کردن پروکسی" }],
+            [{ text: "غیرفعال" }, { text: "حذف پروکسی" }],
+            [{ text: "اعضای بات" }, { text: "اخراج از بات" }],
+            [{ text: "انبن" }, { text: maintToggleText }]
         ];
 
         if (isOwner(userId)) {
-            adminKeyboard.push([{ text: "👑 معاون حاجی" }, { text: "❌ حذف معاون حاجی" }]);
-            adminKeyboard.push([{ text: "👑 معاون ها باشه" }]);
+            adminKeyboard.push([{ text: "حذف مدیر" }, { text: "افزودن مدیر و معاون ها باشه" }]);
+            adminKeyboard.push([{ text: "لیست مدیر ها" }]);
         }
         adminKeyboard.push([{ text: "🔙 بازگشت" }]);
 
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: "👑 به پنل فرماندهی حاج گاسم خوش آمدید:",
+            text: "👑 به پنل فرماندهی خوش آمدید:",
             reply_markup: { keyboard: adminKeyboard, resize_keyboard: true }
         });
         return;
@@ -525,18 +525,18 @@ async function handleMessage(msg) {
         }
         saveDatabase();
 
-        const returnMsg = `🚀 حاج گاسم دوباره برگشت! 🧔‍♂️🔥\nسلام رفیق 👋😎\n✅ ربات با موفقیت فعال شد و آماده خدمت‌رسانی به شماست.\n📡 پروکسی‌ها آماده دریافت هستند\n⚡ سیستم‌ها آنلاین و بدون مشکل در حال کار می‌باشند\nممنون از صبر و همراهی شما ❤️\n🧔‍♂️ Gasem ProMax 🚀`;
+        const returnMsg = `🚀 ربات دوباره برگشت! 🧔‍♂️🔥\nسلام رفیق 👋😎\n✅ ربات با موفقیت فعال شد و آماده خدمت‌رسانی به شماست.\n📡 پروکسی‌ها آماده دریافت هستند\n⚡ سیستم‌ها آنلاین و بدون مشکل در حال کار می‌باشند\nممنون از صبر و همراهی شما ❤️\n🧔‍♂️ Gasem ProMax 🚀`;
         
         if (db.all_users) {
             for (let uId of db.all_users) {
                 let userKeyboard = [
-                    [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-                    [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                    [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-                    [{ text: "🤝 حمایت از حاجی" }]
+                    [{ text: "دریافت پروکسی" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+                    [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "آپدیت کن رباتو" }],
+                    [{ text: "پشتیبانی ربات" }, { text: "پروکسی شارژ کن" }],
+                    [{ text: "حمایت از ربات" }]
                 ];
                 if (await isAdminOrOwner(uId)) {
-                    userKeyboard.push([{ text: "👑 فرماندهی حاجی" }]);
+                    userKeyboard.push([{ text: "پنل مدیریت" }]);
                 }
                 await sendTelegram("sendMessage", {
                     chat_id: uId,
@@ -549,18 +549,18 @@ async function handleMessage(msg) {
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "✅ ربات روشن شد و پیام بازگشت برای تمام کاربران ارسال گردید!",
-            reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+            reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
         });
         return;
     }
 
-    if (text === "👑 معاون ها باشه" && isOwner(userId)) {
+    if (text === "لیست مدیر ها" && isOwner(userId)) {
         const adminIds = db.admins ? Object.keys(db.admins).filter(id => db.admins[id]) : [];
         if (adminIds.length === 0) {
-            await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ هیچ معاون فعالی ثبت نشده است." });
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ هیچ مدیری فعالی ثبت نشده است." });
             return;
         }
-        let listText = "👑 لیست معاون‌های حاجی:\n\n";
+        let listText = "👑 لیست مدیرهای ربات:\n\n";
         for (let admId of adminIds) {
             let admData = db.users[admId];
             let name = admData ? admData.full_name : "ناشناس";
@@ -571,12 +571,12 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "👥 لشکر حاجی" && await isAdminOrOwner(userId)) {
+    if (text === "اعضای بات" && await isAdminOrOwner(userId)) {
         if (!db.all_users || db.all_users.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ هیچ کاربری ثبت نشده است." });
             return;
         }
-        let userList = "👥 لشکر حاج گاسم:\n\n";
+        let userList = "👥 اعضای بات:\n\n";
         for (let uId of db.all_users) {
             let uData = db.users[uId];
             if (uData) {
@@ -588,7 +588,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "🚨 اعلامیه حاجی" && await isAdminOrOwner(userId)) {
+    if (text === "اعلامیه" && await isAdminOrOwner(userId)) {
         db.actions[userId] = "broadcast";
         saveDatabase();
         await sendTelegram("sendMessage", {
@@ -599,7 +599,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "🛠 اضافه کردن سوغات حاجی" && await isAdminOrOwner(userId)) {
+    if (text === "اضافه کردن پروکسی" && await isAdminOrOwner(userId)) {
         db.actions[userId] = "add_proxy";
         saveDatabase();
         await sendTelegram("sendMessage", {
@@ -610,18 +610,18 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "📥 مکش پروکسی از کانال" && await isAdminOrOwner(userId)) {
+    if (text === "غیرفعال" && await isAdminOrOwner(userId)) {
         db.actions[userId] = "fetch_channel";
         saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: "📡 آیدی یا لینک کانال مورد نظر را بفرستید (مثال: @ProxyChannel):",
+            text: `📡 آیدی یا لینک کانال مورد نظر را بفرستید (مثال: @ProxyChannel):`,
             reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
         });
         return;
     }
 
-    if (text === "❌ فرستادن پروکسی به بازنشستگی" && await isAdminOrOwner(userId)) {
+    if (text === "حذف پروکسی" && await isAdminOrOwner(userId)) {
         if (!db.proxies || db.proxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ پروکسی فعالی وجود ندارد." });
             return;
@@ -638,7 +638,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "🚫 اخراج از جمع حاجی" && await isAdminOrOwner(userId)) {
+    if (text === "اخراج از بات" && await isAdminOrOwner(userId)) {
         db.actions[userId] = "ban_target";
         saveDatabase();
         await sendTelegram("sendMessage", {
@@ -649,7 +649,7 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "🧔‍♂️ حاجی بخشید" && await isAdminOrOwner(userId)) {
+    if (text === "انبن" && await isAdminOrOwner(userId)) {
         db.actions[userId] = "unban_target";
         saveDatabase();
         await sendTelegram("sendMessage", {
@@ -660,18 +660,18 @@ async function handleMessage(msg) {
         return;
     }
 
-    if (text === "👑 معاون حاجی" && isOwner(userId)) {
+    if (text === "افزودن مدیر و معاون ها باشه" && isOwner(userId)) {
         db.actions[userId] = "add_admin";
         saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: "🆔 آیدی عددی فرد مورد نظر برای انتصاب به عنوان معاون را بفرستید:",
+            text: "🆔 آیدی عددی فرد مورد نظر برای انتصاب به عنوان مدیر را بفرستید:",
             reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
         });
         return;
     }
 
-    if (text === "❌ حذف معاون حاجی" && isOwner(userId)) {
+    if (text === "حذف مدیر" && isOwner(userId)) {
         db.actions[userId] = "remove_admin";
         saveDatabase();
         await sendTelegram("sendMessage", {
@@ -691,7 +691,7 @@ async function handleMessage(msg) {
             delete db.actions[userId];
             saveDatabase();
 
-            const maintMsg = `🚧 حاج گاسم فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nحاجی در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ Gasem ProMax 📡`;
+            const maintMsg = `🚧 ربات فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nربات در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ Gasem ProMax 📡`;
 
             if (db.all_users) {
                 for (let uId of db.all_users) {
@@ -706,7 +706,7 @@ async function handleMessage(msg) {
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: "✅ ربات خاموش شد و پیام استراحت برای تمام کاربران ارسال گردید.",
-                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+                reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
             });
             return;
         }
@@ -730,11 +730,11 @@ async function handleMessage(msg) {
                     text: `✅ تعداد ${starAmount} ستاره به پروکسی "${db.proxies[proxyIndex].name}" اضافه شد!\nمجموع ستاره‌ها: ${db.proxies[proxyIndex].stars} ⭐`,
                     reply_markup: {
                         keyboard: [
-                            [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-                            [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                            [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-                            [{ text: "🤝 حمایت از حاجی" }],
-                            [await isAdminOrOwner(userId) ? { text: "👑 فرماندهی حاجی" } : null].filter(Boolean)
+                            [{ text: "دریافت پروکسی" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+                            [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "آپدیت کن رباتو" }],
+                            [{ text: "پشتیبانی ربات" }, { text: "پروکسی شارژ کن" }],
+                            [{ text: "حمایت از ربات" }],
+                            [await isAdminOrOwner(userId) ? { text: "پنل مدیریت" } : null].filter(Boolean)
                         ],
                         resize_keyboard: true
                     }
@@ -747,17 +747,17 @@ async function handleMessage(msg) {
         }
 
         if (action === "broadcast") {
-            const broadcastMsg = `🚨 خبر از دفتر حاج گاسم:\n📩 پیام مدیریت:\n${text}\n\nحاجی گفت اینو بهتون بگیم 😎`;
+            const broadcastMsg = `🚨 خبر از دفتر مدیریت ربات:\n📩 پیام مدیریت:\n${text}\n\nمدیریت گفت اینو بهتون بگیم 😎`;
             if (db.all_users) {
                 for (let uId of db.all_users) {
                     let userKeyboard = [
-                        [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-                        [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                        [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-                        [{ text: "🤝 حمایت از حاجی" }]
+                        [{ text: "دریافت پروکسی" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+                        [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "آپدیت کن رباتو" }],
+                        [{ text: "پشتیبانی ربات" }, { text: "پروکسی شارژ کن" }],
+                        [{ text: "حمایت از ربات" }]
                     ];
                     if (await isAdminOrOwner(uId)) {
-                        userKeyboard.push([{ text: "👑 فرماندهی حاجی" }]);
+                        userKeyboard.push([{ text: "پنل مدیریت" }]);
                     }
                     await sendTelegram("sendMessage", {
                         chat_id: uId,
@@ -771,7 +771,7 @@ async function handleMessage(msg) {
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: "✅ اعلامیه با موفقیت به همه ارسال شد!",
-                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+                reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
             });
             return;
         }
@@ -787,8 +787,8 @@ async function handleMessage(msg) {
             saveDatabase();
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
-                text: `✅ پروکسی با عنوان "${proxyName}" در انبار حاجی ثبت شد!`,
-                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+                text: `✅ پروکسی با عنوان "${proxyName}" در انبار ثبت شد!`,
+                reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
             });
             return;
         }
@@ -799,7 +799,7 @@ async function handleMessage(msg) {
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: `✅ عملیات بررسی کانال انجام شد.`,
-                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+                reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
             });
             return;
         }
@@ -821,7 +821,7 @@ async function handleMessage(msg) {
                 db.users[targetId].ban_reason = reason;
                 await sendTelegram("sendMessage", {
                     chat_id: targetId,
-                    text: `🚫 حاج گاسم تصمیم گرفت! 🧔‍♂️\nسلام رفیق 👋\nدسترسی شما به ربات بسته شد ⛔\n📌 دلیل بن شدن:\n${reason}\n📡 فعلاً پروکسی گرفتن از حاجی برای شما متوقف شده 😂\n👑 مدیریت حاج گاسم`
+                    text: `🚫 مدیریت تصمیم گرفت! 🧔‍♂️\nسلام رفیق 👋\nدسترسی شما به ربات بسته شد ⛔\n📌 دلیل بن شدن:\n${reason}\n📡 فعلاً پروکسی گرفتن برای شما متوقف شده 😂\n👑 مدیریت ربات`
                 });
             }
             delete db.actions[userId];
@@ -830,7 +830,7 @@ async function handleMessage(msg) {
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: "✅ کاربر با موفقیت بن شد.",
-                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+                reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
             });
             return;
         }
@@ -842,7 +842,7 @@ async function handleMessage(msg) {
                 db.users[targetId].ban_reason = "";
                 await sendTelegram("sendMessage", {
                     chat_id: targetId,
-                    text: `🔓 حاج گاسم بخشید! 🧔‍♂️\nسلام رفیق 👋😎\nدسترسی شما دوباره فعال شد ✅\n👑 مدیریت حاج گاسم`
+                    text: `🔓 مدیریت بخشید! 🧔‍♂️\nسلام رفیق 👋😎\nدسترسی شما دوباره فعال شد ✅\n👑 مدیریت ربات`
                 });
             }
             delete db.actions[userId];
@@ -850,7 +850,7 @@ async function handleMessage(msg) {
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: "✅ کاربر آنبن شد.",
-                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+                reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
             });
             return;
         }
@@ -861,11 +861,11 @@ async function handleMessage(msg) {
             db.admins[newAdminId] = true;
             delete db.actions[userId];
             saveDatabase();
-            await sendTelegram("sendMessage", { chat_id: newAdminId, text: "🎉 شما مدیر شدید! یک بار روی دکمه آپدیت حاج گاسم بزن تا دکمه مدیریت بیاد." });
+            await sendTelegram("sendMessage", { chat_id: newAdminId, text: "🎉 شما مدیر شدید! یک بار روی دکمه آپدیت رباتو بزن تا دکمه مدیریت بیاد." });
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
-                text: "✅ معاون جدید اضافه شد.",
-                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+                text: "✅ مدیر جدید اضافه شد.",
+                reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
             });
             return;
         }
@@ -875,11 +875,11 @@ async function handleMessage(msg) {
             if (db.admins) delete db.admins[remAdminId];
             delete db.actions[userId];
             saveDatabase();
-            await sendTelegram("sendMessage", { chat_id: remAdminId, text: "⚠️ شما توسط حاجی از مدیریت حذف شدید." });
+            await sendTelegram("sendMessage", { chat_id: remAdminId, text: "⚠️ شما توسط مدیریت از مدیریت حذف شدید." });
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: "✅ مدیر حذف شد.",
-                reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+                reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
             });
             return;
         }
@@ -899,11 +899,11 @@ async function handleMessage(msg) {
                 text: "✅ پیام شما به پشتیبانی ارسال شد.",
                 reply_markup: {
                     keyboard: [
-                        [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-                        [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                        [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-                        [{ text: "🤝 حمایت از حاجی" }],
-                        [await isAdminOrOwner(userId) ? { text: "👑 فرماندهی حاجی" } : null].filter(Boolean)
+                        [{ text: "دریافت پروکسی" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+                        [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "آپدیت کن رباتو" }],
+                        [{ text: "پشتیبانی ربات" }, { text: "پروکسی شارژ کن" }],
+                        [{ text: "حمایت از ربات" }],
+                        [await isAdminOrOwner(userId) ? { text: "پنل مدیریت" } : null].filter(Boolean)
                     ],
                     resize_keyboard: true
                 }
@@ -919,13 +919,13 @@ async function handleMessage(msg) {
         saveDatabase();
         await sendTelegram("sendMessage", {
             chat_id: replyTarget,
-            text: `📩 پیام از دفتر حاجی 🧔‍♂️\n\n${text}`,
+            text: `📩 پیام از دفتر مدیریت ربات 🧔‍♂️\n\n${text}`,
             reply_markup: { inline_keyboard: [[{ text: "💬 جواب دادن", callback_data: `reply_sup_${userId}` }]] }
         });
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "✅ پاسخ برای کاربر ارسال شد.",
-            reply_markup: { keyboard: [[{ text: "👑 فرماندهی حاجی" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+            reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
         });
         return;
     }
@@ -944,13 +944,13 @@ async function handleCallbackQuery(cq) {
             await sendTelegram("deleteMessage", { chat_id: chatId, message_id: messageId });
             
             let keyboard = [
-                [{ text: "😎 گاسم، پروکسی بده" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
-                [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "🔁 آپدیت کن حاج گاسمو" }],
-                [{ text: "🛠 پشتیبانی حاجی" }, { text: "📦 حاجی شارژ کن" }],
-                [{ text: "🤝 حمایت از حاجی" }]
+                [{ text: "دریافت پروکسی" }, { text: "⚡️ اتصال شانسی (تک‌کلیکی)" }],
+                [{ text: "📶 تست پینگ پروکسی‌ها" }, { text: "آپدیت کن رباتو" }],
+                [{ text: "پشتیبانی ربات" }, { text: "پروکسی شارژ کن" }],
+                [{ text: "حمایت از ربات" }]
             ];
             if (await isAdminOrOwner(userId)) {
-                keyboard.push([{ text: "👑 فرماندهی حاجی" }]);
+                keyboard.push([{ text: "پنل مدیریت" }]);
             }
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
@@ -1091,7 +1091,7 @@ const server = http.createServer((req, res) => {
         });
     } else {
         res.writeHead(200, { 'Content-Type': 'text/plain' });
-        res.end('Haj Gasem Ultimate Bot is running! 😎');
+        res.end('Bot is running! 😎');
     }
 });
 
