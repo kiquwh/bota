@@ -7,7 +7,7 @@ const BOT_TOKEN = "8751373370:AAFDeoi7OIeelK53RJYrh9xgsvY0HVy8oGI";
 const OWNER_ID = 8854073031;
 const CHANNEL_USERNAME = "@Kiabot12"; 
 const CHANNEL_LINK = "https://t.me/Kiabot12";
-const BOT_USERNAME = "@HajGasemProxyBot"; // آیدی اصلاح‌شده ربات
+const BOT_USERNAME = "@HajGasemProxyBot";
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'data');
@@ -119,16 +119,16 @@ function pingProxy(proxyLink) {
 
             req.on('timeout', () => {
                 req.destroy();
-                resolve("آفلاین / ضعیف 🔴");
+                resolve("آفلاین 🔴");
             });
 
             req.on('error', () => {
-                resolve("آفلاین / ضعیف 🔴");
+                resolve("آفلاین 🔴");
             });
 
             req.end();
         } catch (e) {
-            resolve("آفلاین / ضعیف 🔴");
+            resolve("آفلاین 🔴");
         }
     });
 }
@@ -370,13 +370,17 @@ async function handleMessage(msg) {
 
         let waitMsg = await sendTelegram("sendMessage", { chat_id: chatId, text: "⏳ در حال گرفتن پینگ واقعی پروکسی‌ها..." });
         let inlineKeyboard = [];
+        let pingText = "📊 <b>نتیجه تست پینگ واقعی انبار:</b>\n\n";
 
         for (let i = 0; i < db.proxies.length; i++) {
             let p = db.proxies[i];
             let pingResult = await pingProxy(p.link);
             let starsCount = p.stars || 0;
+            
+            pingText += `📦 ${p.name}: <b>${pingResult}</b>\n`;
+
             let row = [
-                { text: `🔗 ${p.name} [${pingResult}]`, url: p.link },
+                { text: `🔗 ${p.name}`, url: p.link },
                 { text: `⭐ ${starsCount}`, callback_data: isOwner(userId) ? `admin_star_${i}` : `star_proxy_${i}` },
                 { text: "🚨 گزارش", callback_data: `report_proxy_${i}` }
             ];
@@ -389,7 +393,8 @@ async function handleMessage(msg) {
 
         await sendTelegram("sendMessage", {
             chat_id: chatId,
-            text: "📊 نتیجه تست پینگ واقعی انبار:",
+            text: pingText,
+            parse_mode: "HTML",
             reply_markup: { inline_keyboard: inlineKeyboard }
         });
         return;
