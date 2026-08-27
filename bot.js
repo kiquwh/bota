@@ -7,7 +7,7 @@ const BOT_TOKEN = "8751373370:AAFDeoi7OIeelK53RJYrh9xgsvY0HVy8oGI";
 const OWNER_ID = 8854073031;
 const CHANNEL_USERNAME = "@Kiabot12"; 
 const CHANNEL_LINK = "https://t.me/Kiabot12";
-const BOT_USERNAME = "@kiaproxy"; // آیدی جدید ربات برای ارجاع
+const BOT_USERNAME = "@HajGasemProxyBot"; // آیدی اصلاح‌شده ربات
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'data');
@@ -239,7 +239,7 @@ async function handleMessage(msg) {
             const reason = db.bot_settings.maintenance_reason || "در حال بروزرسانی سیستم";
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
-                text: `🚧 ربات فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nربات در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ kiaproxy 📡\n\n🔗 آیدی بات: ${BOT_USERNAME}`
+                text: `🚧 ربات فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nربات در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ HajGasemProxyBot 📡\n\n🔗 آیدی بات: ${BOT_USERNAME}`
             });
             return;
         }
@@ -526,7 +526,7 @@ async function handleMessage(msg) {
         }
         saveDatabase();
 
-        const returnMsg = `🚀 ربات دوباره برگشت! 🧔‍♂️🔥\nسلام رفیق 👋😎\n✅ ربات با موفقیت فعال شد و آماده خدمت‌رسانی به شماست.\n📡 پروکسی‌ها آماده دریافت هستند\n⚡ سیستم‌ها آنلاین و بدون مشکل در حال کار می‌باشند\nممنون از صبر و همراهی شما ❤️\n🧔‍♂️ kiaproxy 🚀`;
+        const returnMsg = `🚀 ربات دوباره برگشت! 🧔‍♂️🔥\nسلام رفیق 👋😎\n✅ ربات با موفقیت فعال شد و آماده خدمت‌رسانی به شماست.\n📡 پروکسی‌ها آماده دریافت هستند\n⚡ سیستم‌ها آنلاین و بدون مشکل در حال کار می‌باشند\nممنون از صبر و همراهی شما ❤️\n🧔‍♂️ HajGasemProxyBot 🚀`;
         
         if (db.all_users) {
             for (let uId of db.all_users) {
@@ -692,7 +692,7 @@ async function handleMessage(msg) {
             delete db.actions[userId];
             saveDatabase();
 
-            const maintMsg = `🚧 ربات فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nربات در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ kiaproxy 📡`;
+            const maintMsg = `🚧 ربات فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nربات در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ HajGasemProxyBot 📡`;
 
             if (db.all_users) {
                 for (let uId of db.all_users) {
