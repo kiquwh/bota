@@ -6,7 +6,8 @@ const path = require('path');
 const BOT_TOKEN = "8751373370:AAFDeoi7OIeelK53RJYrh9xgsvY0HVy8oGI";
 const OWNER_ID = 8854073031;
 const CHANNEL_USERNAME = "@Kiabot12"; 
-const BOT_USERNAME = "@HajGasemProxyBot"; // آیدی ربات برای ارجاع
+const CHANNEL_LINK = "https://t.me/Kiabot12";
+const BOT_USERNAME = "@kiaproxy"; // آیدی جدید ربات برای ارجاع
 const TELEGRAM_API = `https://api.telegram.org/bot${BOT_TOKEN}`;
 
 const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'data');
@@ -238,7 +239,7 @@ async function handleMessage(msg) {
             const reason = db.bot_settings.maintenance_reason || "در حال بروزرسانی سیستم";
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
-                text: `🚧 ربات فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nربات در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ kia proxy📡\n\n🔗 آیدی بات: ${BOT_USERNAME}`
+                text: `🚧 ربات فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nربات در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ kiaproxy 📡\n\n🔗 آیدی بات: ${BOT_USERNAME}`
             });
             return;
         }
@@ -293,10 +294,10 @@ async function handleMessage(msg) {
         if (!isMember) {
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
-                text: `⚠️ رفیق عزیز برای استفاده از ربات، اول باید توی کانال زیر عضو بشی:\n\n🔗 ${CHANNEL_USERNAME}\n\n👇 بعد از عضویت، روی دکمه‌ی زیر بزن تا رباتت فعال بشه:`,
+                text: `⚠️ رفیق عزیز برای استفاده از ربات، اول باید توی کانال زیر عضو بشی:\n\n🔗 ${CHANNEL_LINK}\n\n👇 بعد از عضویت، روی دکمه‌ی زیر بزن تا رباتت فعال بشه:`,
                 reply_markup: {
                     inline_keyboard: [
-                        [{ text: "📢 ورود به کانال", url: `https://t.me/Kiabot12` }],
+                        [{ text: "📢 ورود به کانال", url: CHANNEL_LINK }],
                         [{ text: "✅ عضو شدم، بررسی کن", callback_data: "check_join" }]
                     ]
                 }
@@ -471,7 +472,7 @@ async function handleMessage(msg) {
             parse_mode: "HTML",
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: "📤 اشتراک‌گذاری لینک در تلگرام", url: `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent("دریفت پروکسی‌های رایگان و پرسرعت با ربات 😎👇")}` }]
+                    [{ text: "📤 اشتراک‌گذاری لینک در تلگرام", url: `https://t.me/share/url?url=${encodeURIComponent(refLink)}&text=${encodeURIComponent("دریافت پروکسی‌های رایگان و پرسرعت با ربات 😎👇")}` }]
                 ]
             }
         });
@@ -525,7 +526,7 @@ async function handleMessage(msg) {
         }
         saveDatabase();
 
-        const returnMsg = `🚀 ربات دوباره برگشت! 🧔‍♂️🔥\nسلام رفیق 👋😎\n✅ ربات با موفقیت فعال شد و آماده خدمت‌رسانی به شماست.\n📡 پروکسی‌ها آماده دریافت هستند\n⚡ سیستم‌ها آنلاین و بدون مشکل در حال کار می‌باشند\nممنون از صبر و همراهی شما ❤️\n🧔‍♂️ kia proxy 🚀`;
+        const returnMsg = `🚀 ربات دوباره برگشت! 🧔‍♂️🔥\nسلام رفیق 👋😎\n✅ ربات با موفقیت فعال شد و آماده خدمت‌رسانی به شماست.\n📡 پروکسی‌ها آماده دریافت هستند\n⚡ سیستم‌ها آنلاین و بدون مشکل در حال کار می‌باشند\nممنون از صبر و همراهی شما ❤️\n🧔‍♂️ kiaproxy 🚀`;
         
         if (db.all_users) {
             for (let uId of db.all_users) {
@@ -691,7 +692,7 @@ async function handleMessage(msg) {
             delete db.actions[userId];
             saveDatabase();
 
-            const maintMsg = `🚧 ربات فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nربات در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ kia proxy 📡`;
+            const maintMsg = `🚧 ربات فعلاً در حال استراحت است 🧔‍♂️\nسلام رفیق 👋😎\nربات برای انجام کارهای فنی، بروزرسانی یا مدیریت سیستم موقتاً خاموش شده است ⚙️\n📌 دلیل:\n${reason}\n⏳ لطفاً کمی صبر کنید...\nربات در حال آماده‌سازی دوباره است و به‌زودی برمی‌گردد 🚀\n❤️ ممنون از همراهی شما\n🧔‍♂️ kiaproxy 📡`;
 
             if (db.all_users) {
                 for (let uId of db.all_users) {
