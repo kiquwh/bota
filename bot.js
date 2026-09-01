@@ -495,9 +495,10 @@ async function handleMessage(msg) {
 
         let adminKeyboard = [
             [{ text: "اعلامیه" }, { text: "اضافه کردن پروکسی" }],
-            [{ text: "غیرفعال" }, { text: "حذف پروکسی" }],
-            [{ text: "اعضای بات" }, { text: "اخراج از بات" }],
-            [{ text: "انبن" }, { text: maintToggleText }]
+            [{ text: "ویرایش پروکسی" }, { text: "حذف پروکسی" }],
+            [{ text: "غیرفعال" }, { text: "اعضای بات" }],
+            [{ text: "اخراج از بات" }, { text: "انبن" }],
+            [{ text: maintToggleText }]
         ];
 
         if (isOwner(userId)) {
@@ -612,6 +613,23 @@ async function handleMessage(msg) {
             chat_id: chatId,
             text: "🔗 لطفاً فقط لینک پروکسی را ارسال کنید:",
             reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+        });
+        return;
+    }
+
+    if (text === "ویرایش پروکسی" && await isAdminOrOwner(userId)) {
+        if (!db.proxies || db.proxies.length === 0) {
+            await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ پروکسی فعالی برای ویرایش وجود ندارد." });
+            return;
+        }
+        let inlineKeyboard = [];
+        db.proxies.forEach((p, index) => {
+            inlineKeyboard.push([{ text: `✏️ ادیت: ${p.name}`, callback_data: `edit_proxy_${index}` }]);
+        });
+        await sendTelegram("sendMessage", {
+            chat_id: chatId,
+            text: "📝 برای ویرایش، پروکسی مورد نظر را انتخاب کنید:",
+            reply_markup: { inline_keyboard: inlineKeyboard }
         });
         return;
     }
@@ -752,6 +770,26 @@ async function handleMessage(msg) {
             return;
         }
 
+        if (action.startsWith("update_proxy_link_")) {
+            const proxyIndex = parseInt(action.replace("update_proxy_link_", ""));
+            const newLink = text.trim();
+
+            if (db.proxies && db.proxies[proxyIndex]) {
+                db.proxies[proxyIndex].link = newLink;
+                saveDatabase();
+                delete db.actions[userId];
+                await sendTelegram("sendMessage", {
+                    chat_id: chatId,
+                    text: `✅ لینک پروکسی "${db.proxies[proxyIndex].name}" با موفقیت ویرایش شد!`,
+                    reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+                });
+            } else {
+                delete db.actions[userId];
+                await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ پروکسی مورد نظر یافت نشد.", reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true } });
+            }
+            return;
+        }
+
         if (action === "broadcast") {
             const broadcastMsg = `🚨 خبر از دفتر مدیریت ربات:\n📩 پیام مدیریت:\n${text}\n\nمدیریت گفت اینو بهتون بگیم 😎`;
             if (db.all_users) {
@@ -793,7 +831,7 @@ async function handleMessage(msg) {
             saveDatabase();
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
-                text: `✅ پروکسی با عنوان "${proxyName}" در انبار ثبت شد!`,
+                text: `✅ پروکسی با عنوان خودکار "${proxyName}" در انبار ثبت شد!`,
                 reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
             });
             return;
@@ -983,6 +1021,24 @@ async function handleCallbackQuery(cq) {
             await sendTelegram("sendMessage", {
                 chat_id: chatId,
                 text: `✍️ تعداد ستاره‌ای که می‌خواهید به پروکسی "${db.proxies[index].name}" اضافه شود را به صورت عدد ارسال کنید (مثلاً 5 یا 10):`,
+                reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
+            });
+        } else {
+            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "⚠️ این پروکسی دیگر موجود نیست." });
+        }
+        return;
+    }
+
+    if (data.startsWith("edit_proxy_")) {
+        const index = parseInt(data.replace("edit_proxy_", ""));
+        if (db.proxies && db.proxies[index]) {
+            if (!db.actions) db.actions = {};
+            db.actions[userId] = `update_proxy_link_${index}`;
+            saveDatabase();
+            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "لینک جدید پروکسی را بفرستید." });
+            await sendTelegram("sendMessage", {
+                chat_id: chatId,
+                text: `🔗 لینک جدید پروکسی "${db.proxies[index].name}" را ارسال کنید:\n\n(اگر منصرف شدید روی دکمه بازگشت بزنید)`,
                 reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
             });
         } else {
