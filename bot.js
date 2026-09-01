@@ -210,7 +210,8 @@ async function handleMessage(msg) {
 
     if (isGroup) {
         if (text.toLowerCase().includes("پروکسی")) {
-            if (!db.proxies || db.proxies.length === 0) {
+            const activeProxies = (db.proxies || []).filter(p => p && !p.deleted);
+            if (activeProxies.length === 0) {
                 await sendTelegram("sendMessage", {
                     chat_id: chatId,
                     reply_to_message_id: msg.message_id,
@@ -219,7 +220,7 @@ async function handleMessage(msg) {
                 return;
             }
             let inlineKeyboard = [];
-            db.proxies.slice(0, 4).forEach((p) => {
+            activeProxies.slice(0, 4).forEach((p) => {
                 inlineKeyboard.push([{ text: `🔗 ${p.name} (⭐ ${p.stars || 0})`, url: p.link }]);
             });
             await sendTelegram("sendMessage", {
@@ -338,13 +339,15 @@ async function handleMessage(msg) {
     }
 
     if (text === "دریافت پروکسی") {
-        if (!db.proxies || db.proxies.length === 0) {
+        const activeProxies = (db.proxies || []).filter(p => p && !p.deleted);
+        if (activeProxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ فعلاً انبار خالیه رفیق! به‌زودی پروکسی میذاریم." });
             return;
         }
 
         let inlineKeyboard = [];
         db.proxies.forEach((p, index) => {
+            if (!p || p.deleted) return;
             let starsCount = p.stars || 0;
             let row = [
                 { text: `🔗 ${p.name}`, url: p.link },
@@ -363,7 +366,8 @@ async function handleMessage(msg) {
     }
 
     if (text === "📶 تست پینگ پروکسی‌ها") {
-        if (!db.proxies || db.proxies.length === 0) {
+        const activeProxies = (db.proxies || []).filter(p => p && !p.deleted);
+        if (activeProxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ انباری برای تست پینگ وجود ندارد." });
             return;
         }
@@ -374,6 +378,7 @@ async function handleMessage(msg) {
 
         for (let i = 0; i < db.proxies.length; i++) {
             let p = db.proxies[i];
+            if (!p || p.deleted) continue;
             let pingResult = await pingProxy(p.link);
             let starsCount = p.stars || 0;
             
@@ -401,12 +406,18 @@ async function handleMessage(msg) {
     }
 
     if (text === "⚡️ اتصال شانسی (تک‌کلیکی)") {
-        if (!db.proxies || db.proxies.length === 0) {
+        const activeProxies = (db.proxies || []).filter(p => p && !p.deleted);
+        if (activeProxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "🧔‍♂️ انبار خالیه رفیق! فعلاً پروکسی وجود نداره." });
             return;
         }
 
-        const randomIndex = Math.floor(Math.random() * db.proxies.length);
+        const validIndices = [];
+        db.proxies.forEach((p, idx) => {
+            if (p && !p.deleted) validIndices.push(idx);
+        });
+
+        const randomIndex = validIndices[Math.floor(Math.random() * validIndices.length)];
         const randomProxy = db.proxies[randomIndex];
         const starsCount = randomProxy.stars || 0;
 
@@ -628,14 +639,17 @@ async function handleMessage(msg) {
     }
 
     if (text === "حذف پروکسی" && await isAdminOrOwner(userId)) {
-        if (!db.proxies || db.proxies.length === 0) {
+        const activeProxies = (db.proxies || []).filter(p => p && !p.deleted);
+        if (activeProxies.length === 0) {
             await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ پروکسی فعالی وجود ندارد." });
             return;
         }
         let inlineKeyboard = [];
         db.proxies.forEach((p, index) => {
+            if (!p || p.deleted) return;
             inlineKeyboard.push([{ text: `❌ حذف: ${p.name}`, callback_data: `del_proxy_${index}` }]);
         });
+        inlineKeyboard.push([{ text: "🔙 بازگشت", callback_data: "cancel_del_proxy" }]);
         await sendTelegram("sendMessage", {
             chat_id: chatId,
             text: "🗑 برای حذف هر پروکسی روی دکمه‌ی آن بزنید:",
@@ -726,7 +740,7 @@ async function handleMessage(msg) {
                 return;
             }
 
-            if (db.proxies && db.proxies[proxyIndex]) {
+            if (db.proxies && db.proxies[proxyIndex] && !db.proxies[proxyIndex].deleted) {
                 if (!db.proxies[proxyIndex].stars) db.proxies[proxyIndex].stars = 0;
                 db.proxies[proxyIndex].stars += starAmount;
                 saveDatabase();
@@ -747,7 +761,7 @@ async function handleMessage(msg) {
                 });
             } else {
                 delete db.actions[userId];
-                await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ پروکسی مورد نظر یافت نشد." });
+                await sendTelegram("sendMessage", { chat_id: chatId, text: "⚠️ پروکسی مورد نظر یافت نشد یا حذف شده است." });
             }
             return;
         }
@@ -785,17 +799,38 @@ async function handleMessage(msg) {
         if (action === "add_proxy") {
             const proxyLink = text.trim();
             if (!db.proxies) db.proxies = [];
-            const numbersMap = ["اولین", "دومین", "سومین", "چهارمین", "پنجمین", "ششمین", "هفتمین", "هشتمین", "نهمین", "دهمین"];
-            let proxyName = numbersMap[db.proxies.length] ? `${numbersMap[db.proxies.length]} پروکسی` : `پروکسی شماره ${db.proxies.length + 1}`;
+            
+            let insertIndex = -1;
+            for (let i = 0; i < db.proxies.length; i++) {
+                if (db.proxies[i] && db.proxies[i].deleted) {
+                    insertIndex = i;
+                    break;
+                }
+            }
 
-            db.proxies.push({ name: proxyName, link: proxyLink, stars: 0 });
-            delete db.actions[userId];
-            saveDatabase();
-            await sendTelegram("sendMessage", {
-                chat_id: chatId,
-                text: `✅ پروکسی با عنوان "${proxyName}" در انبار ثبت شد!`,
-                reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
-            });
+            const numbersMap = ["اولین", "دومین", "سومین", "چهارمین", "پنجمین", "ششمین", "هفتمین", "هشتمین", "نهمین", "دهمین"];
+            
+            if (insertIndex !== -1) {
+                let proxyName = numbersMap[insertIndex] ? `${numbersMap[insertIndex]} پروکسی` : `پروکسی شماره ${insertIndex + 1}`;
+                db.proxies[insertIndex] = { name: proxyName, link: proxyLink, stars: 0, deleted: false };
+                delete db.actions[userId];
+                saveDatabase();
+                await sendTelegram("sendMessage", {
+                    chat_id: chatId,
+                    text: `✅ پروکسی جایگزین با عنوان "${proxyName}" در انبار ثبت شد!`,
+                    reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+                });
+            } else {
+                let proxyName = numbersMap[db.proxies.length] ? `${numbersMap[db.proxies.length]} پروکسی` : `پروکسی شماره ${db.proxies.length + 1}`;
+                db.proxies.push({ name: proxyName, link: proxyLink, stars: 0, deleted: false });
+                delete db.actions[userId];
+                saveDatabase();
+                await sendTelegram("sendMessage", {
+                    chat_id: chatId,
+                    text: `✅ پروکسی با عنوان "${proxyName}" در انبار ثبت شد!`,
+                    reply_markup: { keyboard: [[{ text: "پنل مدیریت" }, { text: "🔙 بازگشت" }]], resize_keyboard: true }
+                });
+            }
             return;
         }
 
@@ -969,13 +1004,19 @@ async function handleCallbackQuery(cq) {
         return;
     }
 
+    if (data === "cancel_del_proxy") {
+        await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "عملیات لغو شد." });
+        await sendTelegram("deleteMessage", { chat_id: chatId, message_id: messageId });
+        return;
+    }
+
     if (data.startsWith("admin_star_")) {
         if (!isOwner(userId)) {
             await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "❌ این قابلیت فقط برای مالک ربات است!", show_alert: true });
             return;
         }
         const index = parseInt(data.replace("admin_star_", ""));
-        if (db.proxies && db.proxies[index]) {
+        if (db.proxies && db.proxies[index] && !db.proxies[index].deleted) {
             if (!db.actions) db.actions = {};
             db.actions[userId] = `input_star_${index}`;
             saveDatabase();
@@ -986,7 +1027,7 @@ async function handleCallbackQuery(cq) {
                 reply_markup: { keyboard: [[{ text: "🔙 بازگشت" }]], resize_keyboard: true }
             });
         } else {
-            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "⚠️ این پروکسی دیگر موجود نیست." });
+            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "⚠️ این پروکسی وجود ندارد." });
         }
         return;
     }
@@ -1006,7 +1047,7 @@ async function handleCallbackQuery(cq) {
             return;
         }
 
-        if (db.proxies && db.proxies[index]) {
+        if (db.proxies && db.proxies[index] && !db.proxies[index].deleted) {
             if (!db.proxies[index].stars) db.proxies[index].stars = 0;
             db.proxies[index].stars += 1;
             
@@ -1025,7 +1066,7 @@ async function handleCallbackQuery(cq) {
 
     if (data.startsWith("report_proxy_")) {
         const index = parseInt(data.replace("report_proxy_", ""));
-        if (db.proxies && db.proxies[index]) {
+        if (db.proxies && db.proxies[index] && !db.proxies[index].deleted) {
             const proxyName = db.proxies[index].name;
             const user = cq.from;
             const userFullName = (user.first_name || "") + " " + (user.last_name || "");
@@ -1045,7 +1086,7 @@ async function handleCallbackQuery(cq) {
                 show_alert: true
             });
         } else {
-            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "⚠️ این پروکسی یافت نشد." });
+            await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "⚠️ پروکسی وجود ندارد." });
         }
         return;
     }
@@ -1053,14 +1094,16 @@ async function handleCallbackQuery(cq) {
     if (data.startsWith("del_proxy_")) {
         const index = parseInt(data.replace("del_proxy_", ""));
         if (db.proxies && db.proxies[index]) {
-            db.proxies.splice(index, 1);
+            db.proxies[index].deleted = true;
+            db.proxies[index].link = "";
+            db.proxies[index].stars = 0;
             saveDatabase();
         }
         await sendTelegram("answerCallbackQuery", { callback_query_id: cq.id, text: "پروکسی حذف شد!" });
         await sendTelegram("editMessageText", {
             chat_id: chatId,
             message_id: messageId,
-            text: "✅ پروکسی مورد نظر با موفقیت حذف شد."
+            text: "✅ پروکسی مورد نظر حذف شد و جایگاه آن حفظ گردید."
         });
         return;
     }
